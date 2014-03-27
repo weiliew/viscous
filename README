@@ -1,0 +1,11 @@
+This repository contains an open source code for implementing low latency market data feed handlers and order entry gateways.
+The purpose of this project is to allow users of the libraries to be able to create feed and order entry handlers with ease. 
+The primary focus of this project is to design an implement a low latent C++ based libraries and feed/order handler applications
+using the latest libraries (boost and C++11/14) and tools.
+ 
+License information contained in LICENSE file or at http://www.boost.org/LICENSE_1_0.txt
+
+Project Status:
+. 11th Jan 2014 Start of project. Aim is to identify common components and port from the osfix project to be used as baseline
+. 27th March New repository created to migrate from mainly fixed based common code into a more generic common code with project viscous.
+

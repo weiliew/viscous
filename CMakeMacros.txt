@@ -1,0 +1,87 @@
+ #  Created on: 1 Jan 2013
+ #      Author: Wei Liew [wei.liew@outlook.com]
+ #
+ #  Copyright Wei Liew 2012 - 2013.
+ #  Distributed under the Boost Software License, Version 1.0.
+ #  (See http://www.boost.org/LICENSE_1_0.txt)
+ 
+##########################################################
+# Macro to search for all subdirs within the current dir #
+##########################################################
+MACRO(SUBDIRLIST result curdir)
+  FILE(GLOB children RELATIVE ${curdir} ${curdir}/*)
+  SET(dirlist "")
+  FOREACH(child ${children})
+    IF(IS_DIRECTORY ${curdir}/${child})
+        SET(dirlist ${dirlist} ${child})
+    ENDIF(IS_DIRECTORY ${curdir}/${child})
+  ENDFOREACH(child ${children})
+  SET(${result} ${dirlist})
+ENDMACRO()
+
+#####################################################
+# Macro to process each sub directory in common dir #
+#####################################################
+macro (PROCESS_SHARED_DIR subdirname)
+    set (MY_LIBRARY_NAME ${subdirname})             
+    EXECUTE_PROCESS(
+        COMMAND find ${CMAKE_CURRENT_SOURCE_DIR} -maxdepth 1 -name *.cpp
+        OUTPUT_VARIABLE MY_ALL_SRC)
+    
+    # Library build
+    MESSAGE("Processing sub directory [${MY_LIBRARY_NAME}]")
+    if (MY_ALL_SRC)
+        string(REPLACE "\n" ";" MY_SOURCE_FILES ${MY_ALL_SRC})
+        add_library (${MY_LIBRARY_NAME} STATIC ${MY_SOURCE_FILES})
+        
+        # install library
+        install (TARGETS ${MY_LIBRARY_NAME} 
+                 ARCHIVE DESTINATION ${MY_INSTALL_DIR}/lib
+                 LIBRARY DESTINATION ${MY_INSTALL_DIR}/lib)        
+    endif(MY_ALL_SRC)
+
+    # Test case build
+    IF(NOT ${ENABLE_TESTS} STREQUAL "false")    
+        EXECUTE_PROCESS(
+            COMMAND find ${CMAKE_CURRENT_SOURCE_DIR} -name test
+            OUTPUT_VARIABLE MY_TEST_DIRECTORY)
+    ENDIF(NOT ${ENABLE_TESTS} STREQUAL "false")
+
+    if (MY_TEST_DIRECTORY)
+        MESSAGE("  Building test sub directory [Yes]")
+        add_subdirectory (test)
+    else (MY_TEST_DIRECTORY)
+        MESSAGE("  Building test sub directory [No]")
+    endif(MY_TEST_DIRECTORY)
+endmacro (PROCESS_SHARED_DIR subdirname)
+
+#############################
+# Macro to process test dir #
+#############################
+macro (PROCESS_TEST_DIR libName)
+    EXECUTE_PROCESS(
+        COMMAND find ${CMAKE_CURRENT_SOURCE_DIR} -maxdepth 1 -name *.cpp -printf "%f "
+        OUTPUT_VARIABLE MY_TEST_SRC OUTPUT_STRIP_TRAILING_WHITESPACE)
+        
+    separate_arguments(MY_TEST_SRC_LIST UNIX_COMMAND "${MY_TEST_SRC}")
+    
+    # Library build
+    FOREACH(testFile ${MY_TEST_SRC_LIST})
+        string (REGEX REPLACE "\n" "" testFile ${testFile})
+        string (REGEX REPLACE ".cpp" "" testFileName ${testFile})
+        MESSAGE("    Generating test build for [${testFileName}] using test file [${testFile}]")
+        add_executable (${testFileName} ${testFile})
+        add_test(${testFileName} ${EXECUTABLE_OUTPUT_PATH}/${testFileName})
+        
+        target_link_libraries(${testFileName} ${INCLUDE_TEST_LIBS} ${MY_COMMON_LIBS} ${MY_BOOST_LIBS})
+        
+        if(INSTALL_TESTS)
+            install (TARGETS ${testFileName} DESTINATION ${MY_INSTALL_DIR}/bin/tests)
+        endif(INSTALL_TESTS)
+    ENDFOREACH(testFile ${MY_TEST_SRC_LIST})
+endmacro (PROCESS_TEST_DIR libName)
+
+        
+        
+        
+        
