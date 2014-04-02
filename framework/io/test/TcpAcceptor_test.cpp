@@ -23,7 +23,7 @@
 #include "logging/Log.h"
 #include "logging/StdoutSink.h"
 #include "signals/Signal.h"
-#include "buffers/FixedBuffer.h"
+#include "buffers/PoolDefs.h"
 
 using namespace vf_common;
 
@@ -31,40 +31,40 @@ template<typename PayloadType, typename AcceptorType>
 class Sub1
 {
 public:
-    Sub1(size_t id, AcceptorType& acceptor)
+    Sub1(size_t id, AcceptorType acceptor)
     : _id(id)
     , _acceptor(acceptor)
     {
 
     }
 
-    void onData(std::shared_ptr<PayloadType>& payload)
+    void onData(PayloadType& payload)
     {
         BOOST_TEST_MESSAGE("Acceptor: Received callback on Sub1 id: " << _id << " with payload: " << std::string(payload->buffer(), payload->size()));
 
         // send something back
         std::shared_ptr<PayloadType> message = std::make_shared<PayloadType>();
-        _acceptor.syncWrite(std::string("sync: Received message: ") + std::string(payload->buffer(), payload->size()) + "\n");
-        _acceptor.asyncWrite(std::string("async:  Received message: ") + std::string(payload->buffer(), payload->size()) + "\n");
+        _acceptor->syncWrite(std::string("sync: Received message: ") + std::string(payload->buffer(), payload->size()) + "\n");
+        _acceptor->asyncWrite(std::string("async:  Received message: ") + std::string(payload->buffer(), payload->size()) + "\n");
     }
 
 private:
     size_t          _id;
-    AcceptorType&   _acceptor;
+    AcceptorType    _acceptor;
 };
 
-template<typename PayloadType>
+template<typename PayloadType, typename RecvObjType>
 class NewAcceptorSub
 {
 public:
-    void onData(std::shared_ptr<PayloadType>& payload)
+    void onData(PayloadType& payload)
     {
         BOOST_TEST_MESSAGE("Acceptor: Notification of new acceptor ...");
 
         auto& signal = payload->getCallbackSignal();
         signal.setName("AcceptorCallback_");
 
-        auto newSubscriber = std::make_shared<Sub1<FixedBuffer<256>, PayloadType > >(_subscribers.size(), *payload);
+        auto newSubscriber = std::make_shared<Sub1<RecvObjType, PayloadType>>(_subscribers.size(), payload);
         _subscribers.push_back(newSubscriber);
 
         // set up callback for acceptor
@@ -72,7 +72,7 @@ public:
     }
 
 private:
-    std::vector<std::shared_ptr<Sub1<FixedBuffer<256>, PayloadType > > > _subscribers;
+    std::vector<std::shared_ptr<Sub1<RecvObjType, PayloadType > > > _subscribers;
 };
 
 
@@ -88,10 +88,10 @@ BOOST_AUTO_TEST_CASE( Accept_test_1 )
     StdoutSink sink;
     Logger<StdoutSink> myLogger(sink, LogDebug);
 
-    typedef TcpAcceptorHandler<Logger<StdoutSink>, BufferFactory<FixedBuffer<256> >, Signal<FixedBuffer<256> > > TcpAcceptorHandlerType;
+    typedef TcpAcceptorHandler<Logger<StdoutSink>, LockingFixedBuffer1k, Signal<typename LockingFixedBuffer1k::BufferPtrType>> TcpAcceptorHandlerType;
     TcpAcceptorHandlerType tcpAcceptorHandler(io, myLogger);
 
-    NewAcceptorSub<typename TcpAcceptorHandlerType::TcpAcceptorType> acceptorSub;
+    NewAcceptorSub<typename TcpAcceptorHandlerType::TcpAcceptorPtrType, typename LockingFixedBuffer1k::BufferPtrType> acceptorSub;
     tcpAcceptorHandler.newAcceptorSignal().subscribe(&acceptorSub);
 
     // run a thread for the acceptor io

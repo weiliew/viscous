@@ -19,11 +19,11 @@
 namespace vf_common
 {
 
-template<typename Logger, typename BufferFactoryType, typename SignalType, typename InlineIO = std::true_type>
-class TcpInitiator : public IO<Logger, BufferFactoryType, SignalType, boost::asio::ip::tcp, InlineIO>
+template<typename Logger, typename BufferPoolType, typename SignalType, typename InlineIO = std::true_type>
+class TcpInitiator : public IO<Logger, BufferPoolType, SignalType, boost::asio::ip::tcp, InlineIO>
 {
 public:
-    typedef IO<Logger, BufferFactoryType, SignalType, boost::asio::ip::tcp, InlineIO> BaseType;
+    typedef IO<Logger, BufferPoolType, SignalType, boost::asio::ip::tcp, InlineIO> BaseType;
 
     using BaseType::_logger;
     using BaseType::_io;
@@ -77,7 +77,7 @@ public:
             return false;
         }
 
-        _socket.async_connect(endpoint, boost::bind(&TcpInitiator<Logger, BufferFactoryType, SignalType, InlineIO>::handleConnect, this, boost::asio::placeholders::error));
+        _socket.async_connect(endpoint, boost::bind(&TcpInitiator<Logger, BufferPoolType, SignalType, InlineIO>::handleConnect, this, boost::asio::placeholders::error));
 
         return true;
     }
@@ -174,7 +174,7 @@ private:
                 boost::asio::ip::tcp::endpoint endpoint = *_lastEndPointIter;
                 VF_LOG_INFO(_logger, "Attempting to connect to alternative endpoint: " <<
                         endpoint.address().to_string().c_str() << ":" << endpoint.port() << " previous error [" << error.message().c_str() << "]");
-                _socket.async_connect(endpoint, boost::bind(&TcpInitiator<Logger, BufferFactoryType, SignalType, InlineIO>::handleConnect, this, boost::asio::placeholders::error));
+                _socket.async_connect(endpoint, boost::bind(&TcpInitiator<Logger, BufferPoolType, SignalType, InlineIO>::handleConnect, this, boost::asio::placeholders::error));
             }
             else
             {

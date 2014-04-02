@@ -19,11 +19,11 @@
 namespace vf_common
 {
 
-template<typename HandlerType, typename Logger, typename BufferFactoryType, typename SignalType, typename InlineIO = std::true_type>
-class TcpAcceptor : public IO<Logger, BufferFactoryType, SignalType, boost::asio::ip::tcp, InlineIO>
+template<typename HandlerType, typename Logger, typename BufferPoolType, typename SignalType, typename InlineIO = std::true_type>
+class TcpAcceptor : public IO<Logger, BufferPoolType, SignalType, boost::asio::ip::tcp, InlineIO>
 {
 public:
-    typedef IO<Logger, BufferFactoryType, SignalType, boost::asio::ip::tcp, InlineIO> BaseType;
+    typedef IO<Logger, BufferPoolType, SignalType, boost::asio::ip::tcp, InlineIO> BaseType;
 
     using BaseType::_logger;
     using BaseType::_socket;

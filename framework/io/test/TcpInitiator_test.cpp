@@ -19,7 +19,7 @@
 #include "logging/Log.h"
 #include "logging/StdoutSink.h"
 #include "signals/Signal.h"
-#include "buffers/FixedBuffer.h"
+#include "buffers/PoolDefs.h"
 
 using namespace vf_common;
 
@@ -27,7 +27,7 @@ template<typename PayloadType>
 class Sub1
 {
 public:
-    void onData(std::shared_ptr<PayloadType>& payload)
+    void onData(PayloadType& payload)
     {
         BOOST_TEST_MESSAGE("Initiator: Received callback on Sub1 with payload: " << std::string(payload->buffer(), payload->size()));
     }
@@ -49,10 +49,10 @@ public:
     {
         BOOST_TEST_MESSAGE("onConnect callback - connected to endpoint, starting write test");
 
-        auto buffer1 = std::make_shared<FixedBuffer<256> >();
-        auto buffer2 = std::make_shared<FixedBuffer<256> >();
-        auto buffer3 = std::make_shared<FixedBuffer<256> >();
-        auto buffer4 = std::make_shared<FixedBuffer<256> >();
+        auto buffer1 = _handle.getBufferFactory().create();
+        auto buffer2 = _handle.getBufferFactory().create();
+        auto buffer3 = _handle.getBufferFactory().create();
+        auto buffer4 = _handle.getBufferFactory().create();
 
         buffer1->setBuffer("ping sync 1");
         buffer2->setBuffer("ping sync 2");
@@ -95,14 +95,15 @@ BOOST_AUTO_TEST_CASE( TcpInitiator_Test_1 )
     StdoutSink sink;
     Logger<StdoutSink> myLogger(sink, LogDebug);
 
-    typedef TcpInitiator<Logger<StdoutSink>, BufferFactory<FixedBuffer<256> >, Signal<FixedBuffer<256> > > InitiatorType;
+    typedef TcpInitiator<Logger<StdoutSink>, LockingFixedBuffer1k, Signal<typename LockingFixedBuffer1k::BufferPtrType>> InitiatorType;
     InitiatorType tcpInitiator(myLogger);
 
-    InitiatorCallback<InitiatorType> cb(tcpInitiator);
-    tcpInitiator.registerConnectCallback(boost::bind(&InitiatorCallback<InitiatorType>::onConnect, &cb));
-    tcpInitiator.registerDisconnectCallback(boost::bind(&InitiatorCallback<InitiatorType>::onDisconnect, &cb));
+    typedef InitiatorCallback<InitiatorType> InitiatorCallbackType;
+    InitiatorCallbackType cb(tcpInitiator);
+    tcpInitiator.registerConnectCallback(boost::bind(&InitiatorCallbackType::onConnect, &cb));
+    tcpInitiator.registerDisconnectCallback(boost::bind(&InitiatorCallbackType::onDisconnect, &cb));
 
-    Sub1<FixedBuffer<256>> sub1;
+    Sub1<LockingFixedBuffer1k::BufferPtrType> sub1;
     tcpInitiator.getCallbackSignal().subscribe(&sub1, 100);
     BOOST_CHECK(tcpInitiator.start(boost::unit_test::framework::master_test_suite().argv[1], boost::unit_test::framework::master_test_suite().argv[2]));
 

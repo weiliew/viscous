@@ -32,7 +32,7 @@ public:
         BOOST_TEST_MESSAGE("Received callback on Sub1 with payload: " << payload->_payload.c_str());
     }
 
-    void onData(PayloadType* payload)
+    void onData(PayloadType*& payload)
     {
         BOOST_TEST_MESSAGE("Received callback on Sub1 with payload: " << payload->_payload.c_str());
     }
@@ -48,7 +48,7 @@ public:
         BOOST_TEST_MESSAGE("Received callback on Sub2 with payload: " << payload->_payload.c_str());
     }
 
-    void onData(PayloadType* payload)
+    void onData(PayloadType*& payload)
     {
         BOOST_TEST_MESSAGE("Received callback on Sub2 with payload: " << payload->_payload.c_str());
     }
@@ -64,7 +64,7 @@ public:
         BOOST_TEST_MESSAGE("Received callback on Sub3 with payload: " << payload->_payload.c_str());
     }
 
-    void onData(PayloadType* payload)
+    void onData(PayloadType*& payload)
     {
         BOOST_TEST_MESSAGE("Received callback on Sub3 with payload: " << payload->_payload.c_str());
     }
@@ -115,8 +115,8 @@ BOOST_AUTO_TEST_CASE( Signal_test_1 )
     boost::asio::io_service io;
     boost::asio::io_service::work work(io);
 
-    SignalFactory<Signal<PayloadType> > signalFactory("SIG1", io);
-    std::shared_ptr<Signal<PayloadType> > mySignal1 = signalFactory.create();
+    SignalFactory<Signal<std::shared_ptr<PayloadType>>> signalFactory("SIG1", io);
+    std::shared_ptr<Signal<std::shared_ptr<PayloadType>>> mySignal1 = signalFactory.create();
     mySignal1->subscribe(&sub1, 100);
     mySignal1->subscribe(&sub2, 200);
     mySignal1->subscribe(&sub3, 300);
@@ -158,7 +158,7 @@ BOOST_AUTO_TEST_CASE( Signal_test_2 )
 
     boost::asio::io_service io;
     boost::asio::io_service::work work(io);
-    Signal<PayloadType> mySignal("SIG", io);
+    Signal<std::shared_ptr<PayloadType>> mySignal("SIG", io);
     mySignal.subscribe(&sub, 100);
 
     BOOST_TEST_MESSAGE("NOTIFY 1");

@@ -31,7 +31,7 @@
 #include "logging/Log.h"
 #include "logging/StdoutSink.h"
 #include "signals/Signal.h"
-#include "buffers/FixedBuffer.h"
+#include "buffers/PoolDefs.h"
 
 using namespace vf_common;
 
@@ -44,7 +44,6 @@ struct IoTestPayload
     , _timePoint2(0)
     , _timePoint3(0)
     {
-
     }
     uint64_t   _timePoint1; // initiator send
     uint64_t   _timePoint2; // acceptor receive
@@ -56,15 +55,14 @@ template<typename PayloadType, typename AcceptorType>
 class SubAcceptor
 {
 public:
-    SubAcceptor(size_t id, AcceptorType& acceptor)
+    SubAcceptor(size_t id, AcceptorType acceptor)
     : _id(id)
     , _acceptor(acceptor)
     , _lastSize(0)
     {
-
     }
 
-    void onData(std::shared_ptr<PayloadType>& payload)
+    void onData(PayloadType& payload)
     {
         // get time now
         auto timeNow = std::chrono::high_resolution_clock::now();
@@ -83,8 +81,8 @@ public:
             payload->setBuffer((const char *)(&tempPayload), sizeof(IoTestPayload)); // necessary evil
 
             // send payload back to initiator
-            auto payloadCopy = payload;
-            _acceptor.syncWrite(payloadCopy);
+            auto payloadCopy = _acceptor->getBufferFactory().clone(payload);
+            _acceptor->syncWrite(payloadCopy);
 
             bufferLoc += singleSize;
             payloadSize -= singleSize;
@@ -99,22 +97,22 @@ public:
 
 private:
     size_t          _id;
-    AcceptorType&   _acceptor;
+    AcceptorType    _acceptor;
     size_t          _lastSize;
 };
 
-template<typename PayloadType>
+template<typename PayloadType, typename RecvObjType>
 class NewAcceptorSub
 {
 public:
-    void onData(std::shared_ptr<PayloadType>& payload)
+    void onData(PayloadType& payload)
     {
         BOOST_TEST_MESSAGE("Acceptor: Notification of new acceptor ...");
 
         auto& signal = payload->getCallbackSignal();
         signal.setName("AcceptorCallback");
 
-        auto newSubscriber = std::make_shared<SubAcceptor<FixedBuffer<256>, PayloadType > >(_subscribers.size(), *payload);
+        auto newSubscriber = std::make_shared<SubAcceptor<RecvObjType, PayloadType > >(_subscribers.size(), payload);
         _subscribers.push_back(newSubscriber);
 
         // set up callback for acceptor
@@ -122,7 +120,7 @@ public:
     }
 
 private:
-    std::vector<std::shared_ptr<SubAcceptor<FixedBuffer<256>, PayloadType > > > _subscribers;
+    std::vector<std::shared_ptr<SubAcceptor<RecvObjType, PayloadType > > > _subscribers;
 };
 
 template<typename InitiatorType, typename PayloadType>
@@ -143,7 +141,7 @@ public:
     {
     }
 
-    void onData(std::shared_ptr<PayloadType>& payload)
+    void onData(PayloadType& payload)
     {
         // get time now
         auto timeNow = std::chrono::high_resolution_clock::now();
@@ -203,8 +201,11 @@ public:
     bool onTimer()
     {
         // create and send message
-        auto payload = std::make_shared<PayloadType>();
-        payload->setBuffer('\0', sizeof(PayloadType));
+        // TODO Need factory here !
+        auto payload = _handle.getBufferFactory().create();
+
+        // TODO - how to get size ???
+        //payload->setBuffer('\0', sizeof(PayloadType));
         
         // get time now
         auto timeNow = std::chrono::high_resolution_clock::now();
@@ -265,10 +266,10 @@ BOOST_AUTO_TEST_CASE( AutoIo_test_1 )
     StdoutSink sink;
     Logger<StdoutSink> myLogger(sink, LogDebug);
 
-    typedef TcpAcceptorHandler<Logger<StdoutSink>, BufferFactory<FixedBuffer<256> >, Signal<FixedBuffer<256> > > TcpAcceptorHandlerType;
+    typedef TcpAcceptorHandler<Logger<StdoutSink>, LockFreeFixedBuffer256, Signal<typename LockFreeFixedBuffer256::BufferPtrType>> TcpAcceptorHandlerType;
     TcpAcceptorHandlerType tcpAcceptorHandler(io, myLogger);
 
-    NewAcceptorSub<typename TcpAcceptorHandlerType::TcpAcceptorType> acceptorSub;
+    NewAcceptorSub<typename TcpAcceptorHandlerType::TcpAcceptorPtrType, typename LockFreeFixedBuffer256::BufferPtrType> acceptorSub;
     tcpAcceptorHandler.newAcceptorSignal().subscribe(&acceptorSub);
 
     BOOST_TEST_MESSAGE("Starting acceptor on port: " << acceptorPort1);
@@ -278,7 +279,7 @@ BOOST_AUTO_TEST_CASE( AutoIo_test_1 )
     thread1->detach();
 
     TcpAcceptorHandlerType tcpAcceptorHandler2(io2, myLogger);
-    NewAcceptorSub<typename TcpAcceptorHandlerType::TcpAcceptorType> acceptorSub2;
+    NewAcceptorSub<typename TcpAcceptorHandlerType::TcpAcceptorPtrType, typename LockFreeFixedBuffer256::BufferPtrType> acceptorSub2;
     tcpAcceptorHandler2.newAcceptorSignal().subscribe(&acceptorSub2);
 
     BOOST_TEST_MESSAGE("Starting acceptor on port: " << acceptorPort2);
@@ -290,22 +291,23 @@ BOOST_AUTO_TEST_CASE( AutoIo_test_1 )
     sleep(1);
     
     // start the initiators
-    typedef TcpInitiator<Logger<StdoutSink>, BufferFactory<FixedBuffer<256> >, Signal<FixedBuffer<256> > > InitiatorType;
+    typedef TcpInitiator<Logger<StdoutSink>, LockFreeFixedBuffer256, Signal<typename LockFreeFixedBuffer256::BufferPtrType>> InitiatorType;
     InitiatorType tcpInitiator1(myLogger);
 
-    InitiatorCallback<InitiatorType, FixedBuffer<256> > cb1("Initiator1", tcpInitiator1);
+    typedef InitiatorCallback<InitiatorType, LockFreeFixedBuffer256::BufferPtrType> InitiatorCallbackType;
+    InitiatorCallbackType cb1("Initiator1", tcpInitiator1);
     tcpInitiator1.getCallbackSignal().subscribe(&cb1, 100);
-    tcpInitiator1.registerConnectCallback(boost::bind(&InitiatorCallback<InitiatorType, FixedBuffer<256> >::onConnect, &cb1));
-    tcpInitiator1.registerDisconnectCallback(boost::bind(&InitiatorCallback<InitiatorType, FixedBuffer<256> >::onDisconnect, &cb1));
+    tcpInitiator1.registerConnectCallback(boost::bind(&InitiatorCallbackType::onConnect, &cb1));
+    tcpInitiator1.registerDisconnectCallback(boost::bind(&InitiatorCallbackType::onDisconnect, &cb1));
     BOOST_CHECK(tcpInitiator1.start("127.0.0.1", acceptorPort1));
     std::thread initiatorThread1([&tcpInitiator1](){tcpInitiator1.getIO().run();});
     initiatorThread1.detach();
 
     InitiatorType tcpInitiator2(myLogger);
-    InitiatorCallback<InitiatorType, FixedBuffer<256>> cb2("Initiator2", tcpInitiator2);
+    InitiatorCallbackType cb2("Initiator2", tcpInitiator2);
     tcpInitiator2.getCallbackSignal().subscribe(&cb2, 100);
-    tcpInitiator2.registerConnectCallback(boost::bind(&InitiatorCallback<InitiatorType, FixedBuffer<256> >::onConnect, &cb2));
-    tcpInitiator2.registerDisconnectCallback(boost::bind(&InitiatorCallback<InitiatorType, FixedBuffer<256> >::onDisconnect, &cb2));
+    tcpInitiator2.registerConnectCallback(boost::bind(&InitiatorCallbackType::onConnect, &cb2));
+    tcpInitiator2.registerDisconnectCallback(boost::bind(&InitiatorCallbackType::onDisconnect, &cb2));
     BOOST_CHECK(tcpInitiator2.start("127.0.0.1", acceptorPort2));
 
     std::thread initiatorThread2([&tcpInitiator2](){tcpInitiator2.getIO().run();});
@@ -322,6 +324,8 @@ BOOST_AUTO_TEST_CASE( AutoIo_test_1 )
     io2.stop();
     tcpInitiator1.getIO().stop();
     tcpInitiator2.getIO().stop();
+
+    sleep(1);
 
     BOOST_TEST_MESSAGE("Test case AutoIo_test_1 completed");
 }

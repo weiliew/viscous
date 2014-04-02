@@ -24,7 +24,7 @@ template<typename PayloadType>
 class Subscription
 {
 public:
-    typedef boost::function<void (std::shared_ptr<PayloadType>& msg)> CallbackFnType;
+    typedef boost::function<void (PayloadType& msg)> CallbackFnType;
 
     Subscription(void * sub, CallbackFnType fn, size_t runSeq, std::shared_ptr<boost::asio::strand> strand)
     : _runSequence(runSeq)
@@ -47,7 +47,7 @@ public:
         return _runSequence < rhs._runSequence;
     }
 
-    void postWork(std::shared_ptr<PayloadType> payload)
+    void postWork(PayloadType payload)
     {
         _fn(payload);
     }

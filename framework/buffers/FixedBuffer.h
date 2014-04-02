@@ -13,8 +13,8 @@
 #ifndef FIXEDBUFFER_H_
 #define FIXEDBUFFER_H_
 
-#include "utilities/Utilities.h"
 #include "BufferFactory.h"
+#include "utilities/Utilities.h"
 
 namespace vf_common
 {
@@ -31,7 +31,10 @@ public:
     typedef typename storage_type::const_iterator   const_iterator;
 
     FixedBuffer()
+    : bufferSize_(0)
     {
+        // initialise buffer
+        std::fill(buffer_.begin(), buffer_.end(), 0);
     }
 
     ~FixedBuffer()
@@ -39,6 +42,17 @@ public:
     }
 
     FixedBuffer(const FixedBuffer<BufferSize>& copy)
+    {
+        std::copy(copy.buffer_.begin(), copy.buffer_.end(), buffer_.begin());
+    }
+
+    FixedBuffer<BufferSize>& operator=(const FixedBuffer<BufferSize>& copy)
+    {
+        std::copy(copy.buffer_.begin(), copy.buffer_.end(), buffer_.begin());
+        return *this;
+    }
+
+    void copy(const FixedBuffer<BufferSize>& copy)
     {
         std::copy(copy.buffer_.begin(), copy.buffer_.end(), buffer_.begin());
     }
@@ -51,7 +65,7 @@ public:
 
     void push(const value_type& t)
     {
-        if(likely(bufferSize_ < BufferSize))
+        if(UNLIKELY(bufferSize_ < BufferSize))
         {
             buffer_.push(t);
             ++bufferSize_;
@@ -60,7 +74,7 @@ public:
 
     void pop()
     {
-        if(likely(bufferSize_ > 0))
+        if(LIKELY(bufferSize_ > 0))
         {
             --bufferSize_;
             buffer_.pop();
@@ -69,7 +83,7 @@ public:
 /*
     value_type& top()
     {
-        if(unlikely(bufferSize_ == 0))
+        if(UNLIKELY(bufferSize_ == 0))
         {
             return value_type();
         }
@@ -79,7 +93,7 @@ public:
 
     const value_type& top() const
     {
-        if(unlikely(bufferSize_ == 0))
+        if(UNLIKELY(bufferSize_ == 0))
         {
             return value_type();
         }
@@ -109,7 +123,7 @@ public:
 
     void setBuffer(const char * buffer, size_t len)
     {
-        if(unlikely(len > BufferSize))
+        if(UNLIKELY(len > BufferSize))
         {
             // TODO - truncate and copy ?
             return;
@@ -121,7 +135,7 @@ public:
 
     void setBuffer(const char * buffer)
     {
-        if(unlikely(!buffer))
+        if(UNLIKELY(!buffer))
         {
             // TODO - truncate and copy ?
             return;

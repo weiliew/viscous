@@ -40,9 +40,9 @@ typedef PoolDefs<LockedQueue<FixedBuffer<1024> > >   LockingFixedBuffer1k;
 typedef PoolDefs<LockedQueue<FixedBuffer<2048> > >   LockingFixedBuffer2k;
 
 typedef PoolDefs<LockFreeQueue<FixedBuffer<64> > >   LockFreeFixedBuffer64;
-typedef PoolDefs<LockFreeQueue<FixedBuffer<64> > >   LockFreeFixedBuffer256;
-typedef PoolDefs<LockFreeQueue<FixedBuffer<64> > >   LockFreeFixedBuffer1k;
-typedef PoolDefs<LockFreeQueue<FixedBuffer<64> > >   LockFreeFixedBuffer2k;
+typedef PoolDefs<LockFreeQueue<FixedBuffer<256> > >  LockFreeFixedBuffer256;
+typedef PoolDefs<LockFreeQueue<FixedBuffer<1024> > > LockFreeFixedBuffer1k;
+typedef PoolDefs<LockFreeQueue<FixedBuffer<2048> > > LockFreeFixedBuffer2k;
 
 // TODO - variable length Buffers -
 

@@ -27,7 +27,7 @@
 namespace vf_common
 {
 
-template<typename Logger, typename BufferFactoryType, typename SignalType, typename ProtocolType, typename InlineIO = std::true_type>
+template<typename Logger, typename BufferPoolType, typename SignalType, typename ProtocolType, typename InlineIO = std::true_type>
 class IO
 {
 public:
@@ -49,7 +49,7 @@ public:
 
     /*virtual*/ void asyncRead(typename ProtocolType::endpoint endpoint)
     {
-        if(unlikely(!_socket.is_open()))
+        if(UNLIKELY(!_socket.is_open()))
         {
             return;
         }
@@ -66,7 +66,7 @@ public:
     }
 
     template<typename UseStrand = std::true_type>
-    void asyncWrite(std::shared_ptr<typename BufferFactoryType::ElementType> buffer)
+    void asyncWrite(typename BufferPoolType::BufferPtrType buffer)
     {
         asyncWrite(buffer, UseStrand());
     }
@@ -75,7 +75,7 @@ public:
     {
         int transferred = 0;
 
-        if(unlikely(!_socket.is_open()))
+        if(UNLIKELY(!_socket.is_open()))
         {
             return transferred;
         }
@@ -104,11 +104,11 @@ public:
         return transferred;
     }
 
-    /*virtual*/ int syncWrite(std::shared_ptr<typename BufferFactoryType::ElementType> buffer)
+    /*virtual*/ int syncWrite(typename BufferPoolType::BufferPtrType buffer)
     {
         int transferred = 0;
 
-        if(unlikely(!_socket.is_open()))
+        if(UNLIKELY(!_socket.is_open()))
         {
             return transferred;
         }
@@ -133,6 +133,9 @@ public:
                     << " with no error for message [" << std::string(buffer->buffer(), buffer->size()).c_str() << "]");
             }
         }
+
+        // destroy the buffer
+        _bufferFactory.destroy(buffer);
 
         return transferred;
     }
@@ -183,12 +186,17 @@ public:
         return _io;
     }
 
+    typename BufferPoolType::PooledFactoryType& getBufferFactory()
+    {
+        return _bufferFactory;
+    }
+
 protected:
 
     // TODO - decide if we are doing message buffer segmentation here or later ?? ??
-    /*virtual*/ void handleRead(const boost::system::error_code& error, size_t bytes_transferred, std::shared_ptr<typename BufferFactoryType::ElementType> buffer)
+    /*virtual*/ void handleRead(const boost::system::error_code& error, size_t bytes_transferred, typename BufferPoolType::BufferPtrType buffer)
     {
-        if (likely(!error))
+        if (LIKELY(!error))
         {
             buffer->setSize(bytes_transferred);
             processBuffer(buffer, InlineIO());
@@ -200,62 +208,65 @@ protected:
                         << " with error [" << error.message().c_str() << "]. Attempting to disconnect.");
             disconnect();
         }
+
+        // destroy the buffer
+        _bufferFactory.destroy(buffer);
     }
 
-    /*virtual*/ void asyncWrite(std::shared_ptr<typename BufferFactoryType::ElementType> buffer, std::true_type)
+    /*virtual*/ void asyncWrite(typename BufferPoolType::BufferPtrType buffer, std::true_type)
     {
-        if(unlikely(!_socket.is_open()))
+        if(UNLIKELY(!_socket.is_open()))
         {
             return;
         }
 
         boost::asio::async_write(_socket,
                 boost::asio::buffer(buffer->buffer(), buffer->size()),
-                _writeStrand.wrap(boost::bind(&IO<Logger, BufferFactoryType, SignalType, ProtocolType, InlineIO>::handleWrite, this, boost::asio::placeholders::error)));
+                _writeStrand.wrap(boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, buffer, boost::asio::placeholders::error)));
     }
 
-    /*virtual*/ void asyncWrite(std::shared_ptr<typename BufferFactoryType::ElementType> buffer, std::false_type)
+    /*virtual*/ void asyncWrite(typename BufferPoolType::BufferPtrType buffer, std::false_type)
     {
-        if(unlikely(!_socket.is_open()))
+        if(UNLIKELY(!_socket.is_open()))
         {
             return;
         }
 
         boost::asio::async_write(_socket,
                 boost::asio::buffer(buffer->buffer(), buffer->size()),
-                boost::bind(&IO<Logger, BufferFactoryType, SignalType, ProtocolType, InlineIO>::handleWrite, this, boost::asio::placeholders::error));
+                boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, buffer, boost::asio::placeholders::error));
     }
 
     /*virtual*/ void asyncWrite(const std::string& message, std::true_type)
     {
-        if(unlikely(!_socket.is_open()))
+        if(UNLIKELY(!_socket.is_open()))
         {
             return;
         }
 
         boost::asio::async_write(_socket,
                 boost::asio::buffer(message.data(), message.size()),
-                _writeStrand.wrap(boost::bind(&IO<Logger, BufferFactoryType, SignalType, ProtocolType, InlineIO>::handleWrite, this, boost::asio::placeholders::error)));
+                _writeStrand.wrap(boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, boost::asio::placeholders::error)));
     }
 
     /*virtual*/ void asyncWrite(const std::string& message, std::false_type)
     {
-        if(unlikely(!_socket.is_open()))
+        if(UNLIKELY(!_socket.is_open()))
         {
             return;
         }
 
         boost::asio::async_write(_socket,
                 boost::asio::buffer(message.data(), message.size()),
-                boost::bind(&IO<Logger, BufferFactoryType, SignalType, ProtocolType, InlineIO>::handleWrite, this, boost::asio::placeholders::error));
+                boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, boost::asio::placeholders::error));
     }
 
-    void processBuffer(std::shared_ptr<typename BufferFactoryType::ElementType>& buffer, std::true_type)
+    void processBuffer(typename BufferPoolType::BufferPtrType buffer, std::true_type)
     {
         _callbackSignal.dispatch(buffer);
     }
 
-    /*virtual*/ void processBuffer(std::shared_ptr<typename BufferFactoryType::ElementType>& buffer, std::false_type)
+    /*virtual*/ void processBuffer(typename BufferPoolType::BufferPtrType buffer, std::false_type)
     {
         _callbackSignal.post(buffer);
     }
@@ -273,6 +284,19 @@ protected:
         }
     }
 
+    /*virtual*/ void handleWrite(typename BufferPoolType::BufferPtrType buffer, const boost::system::error_code& error)
+    {
+        if (error)
+        {
+            VF_LOG_WARN(_logger, "Error writing data to endpoint: " << _lastEndpoint.address().to_string().c_str() << ":" << _lastEndpoint.port()
+                    << " with error [" << error.message().c_str() << "]. Attempting to disconnect.");
+            disconnect();
+        }
+
+        // destroy the buffer
+        _bufferFactory.destroy(buffer);
+    }
+
     /*virtual*/ void handleWrite(const boost::system::error_code& error)
     {
         if (error)
@@ -283,32 +307,32 @@ protected:
         }
     }
 
-    boost::asio::io_service             _io;
-    boost::asio::io_service::work       _endlessWork;
-    boost::asio::io_service::strand     _writeStrand;
-    Logger&                             _logger;
-    BufferFactoryType                   _bufferFactory;
-    SignalType                          _callbackSignal;
-    typename ProtocolType::socket       _socket;
-    typename ProtocolType::endpoint     _lastEndpoint;
+    boost::asio::io_service                         _io;
+    boost::asio::io_service::work                   _endlessWork;
+    boost::asio::io_service::strand                 _writeStrand;
+    Logger&                                         _logger;
+    typename BufferPoolType::PooledFactoryType      _bufferFactory;
+    SignalType                                      _callbackSignal;
+    typename ProtocolType::socket                   _socket;
+    typename ProtocolType::endpoint                 _lastEndpoint;
 
     // callbacks
-    boost::function<void (void)>        _connectCallback;
-    boost::function<void (void)>        _disconnectCallback;
+    boost::function<void (void)>                    _connectCallback;
+    boost::function<void (void)>                    _disconnectCallback;
 
 private:
     void asyncRead()
     {
-        if(unlikely(!_socket.is_open()))
+        if(UNLIKELY(!_socket.is_open()))
         {
             return;
         }
 
         // get a new buffer from the factory
-        std::shared_ptr<typename BufferFactoryType::ElementType> buffer(_bufferFactory.create());
+        auto buffer = _bufferFactory.create();
 
         _socket.async_read_some(boost::asio::buffer(buffer->buffer(), buffer->capacity()),
-                boost::bind(&IO<Logger, BufferFactoryType, SignalType, ProtocolType, InlineIO>::handleRead,
+                boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleRead,
                             this,
                             boost::asio::placeholders::error,
                             boost::asio::placeholders::bytes_transferred,

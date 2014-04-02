@@ -32,6 +32,11 @@ public:
     : _queue(InitialCapacity)
     , _queueSize(0)
     {
+        for(size_t count=0;count<InitialCapacity;++count)
+        {
+            auto newElem = createOne();
+            push(newElem);
+        }
     }
 
     ~LockFreeQueue()
@@ -40,13 +45,13 @@ public:
 
     bool pop(value_ptr_type& element)
     {
-        if(unlikely(!_queueSize))
+        if(LIKELY(_queue.pop(element)))
         {
-            return false;
+            --_queueSize;
+            return true;
         }
 
-        --_queueSize;
-        return _queue.pop(element);
+        return false;
     }
 
     void push(value_ptr_type& element)
@@ -63,7 +68,7 @@ public:
     void clear()
     {
         value_ptr_type dummy;
-        while(_queue.pop(dummy))
+        while(pop(dummy))
         {
             delete dummy;
         }
@@ -83,7 +88,7 @@ public:
     static value_ptr_type createOne()
     {
         // TODO - might want to specify an allocator
-        return new value_type();
+        return new value_type;
     }
 
 private:

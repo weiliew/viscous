@@ -46,7 +46,7 @@ public:
 
         _subscriptionList.push_back(Subscription<PayloadType>(
                 subscriber,
-                boost::bind(static_cast<void (SubscriberType::*)(std::shared_ptr<PayloadType>&)>(&SubscriberType::onData), subscriber, _1),
+                boost::bind(static_cast<void (SubscriberType::*)(PayloadType&)>(&SubscriberType::onData), subscriber, _1),
                 runSeq,
                 getStrand(runId)));
 
@@ -76,7 +76,7 @@ public:
     }
 
     // async post
-    inline void post(std::shared_ptr<PayloadType>& payload)
+    inline void post(PayloadType& payload)
     {
         for_each(_subscriptionList.begin(), _subscriptionList.end(), [&payload](Subscription<PayloadType>& subscription){
             // is using lamda faster than boost::bind here ??
@@ -88,7 +88,7 @@ public:
     }
 
     // inline dispatch on the current thread
-    inline void dispatch(std::shared_ptr<PayloadType>& payload)
+    inline void dispatch(PayloadType& payload)
     {
         for_each(_subscriptionList.begin(), _subscriptionList.end(), [&payload](Subscription<PayloadType>& subscription){
             subscription._fn(payload);
@@ -98,6 +98,7 @@ public:
 private:
     std::vector<Subscription<PayloadType> > _subscriptionList;
 };
+
 
 template<typename PayloadType>
 class Signal<PayloadType *> : public SignalBase
@@ -126,7 +127,7 @@ public:
 
         _subscriptionList.push_back(Subscription<PayloadType*>(
                 subscriber,
-                boost::bind(static_cast<void (SubscriberType::*)(PayloadType*)>(&SubscriberType::onData), subscriber, _1),
+                boost::bind(static_cast<void (SubscriberType::*)(PayloadType*&)>(&SubscriberType::onData), subscriber, _1),
                 runSeq,
                 getStrand(runId)));
 

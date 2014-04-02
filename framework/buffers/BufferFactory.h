@@ -13,6 +13,8 @@
 #ifndef BUFFERFACTORY_H_
 #define BUFFERFACTORY_H_
 
+#include "utilities/Utilities.h"
+
 namespace vf_common
 {
 
@@ -73,12 +75,26 @@ public:
     {
         // get from pool or if pool empty, create new
         value_ptr_type toRet;
-        if(!_pool.empty() && _pool.aquire(toRet))
+        if(LIKELY(_pool.aquire(toRet)))
         {
             return toRet;
         }
 
         return PoolType::createOne();
+    }
+
+    value_ptr_type clone(value_ptr_type copy)
+    {
+        // get from pool or if pool empty, create new
+        value_ptr_type toRet;
+        if(UNLIKELY(!_pool.aquire(toRet)))
+        {
+            toRet = PoolType::createOne();
+        }
+        // make copy
+        toRet->copy(*copy);
+
+        return toRet;
     }
 
     void destroy(value_ptr_type buffer)

@@ -18,12 +18,13 @@
 namespace vf_common
 {
 
-template<typename Logger, typename BufferFactoryType, typename SignalType, typename InlineIO = std::true_type>
+template<typename Logger, typename BufferPoolType, typename SignalType, typename InlineIO = std::true_type>
 class TcpAcceptorHandler : public SecondsTimer
 {
 public:
-    typedef TcpAcceptorHandler<Logger, BufferFactoryType, SignalType, InlineIO> HandlerType;
-    typedef TcpAcceptor<HandlerType, Logger, BufferFactoryType, SignalType, InlineIO> TcpAcceptorType;
+    typedef TcpAcceptorHandler<Logger, BufferPoolType, SignalType, InlineIO>        HandlerType;
+    typedef TcpAcceptor<HandlerType, Logger, BufferPoolType, SignalType, InlineIO>  TcpAcceptorType;
+    typedef std::shared_ptr<TcpAcceptorType>                                        TcpAcceptorPtrType;
 
     TcpAcceptorHandler(boost::asio::io_service& io, Logger& logger)
     : SecondsTimer(io)
@@ -66,7 +67,7 @@ public:
         return true;
     }
 
-    Signal<TcpAcceptorType>& newAcceptorSignal()
+    Signal<TcpAcceptorPtrType>& newAcceptorSignal()
     {
         return _newAcceptorSignal;
     }
@@ -95,10 +96,10 @@ private:
         return false;
     }
 
-    void handleAccept(const boost::system::error_code& error, std::shared_ptr<TcpAcceptorType> acceptor)
+    void handleAccept(const boost::system::error_code& error, TcpAcceptorPtrType acceptor)
     {
         boost::asio::ip::tcp::endpoint endpoint = acceptor->getSocket().remote_endpoint();
-        if (likely(!error))
+        if (LIKELY(!error))
         {
             // listen for any new client first
             accept();
@@ -136,13 +137,13 @@ private:
                 this, boost::asio::placeholders::error, newAcceptor));
     }
 
-    Logger                                                      _logger;
-    std::shared_ptr<boost::asio::ip::tcp::acceptor>             _acceptor;
-    boost::asio::io_service&                                    _ioService;
-    Signal<TcpAcceptorType>                                     _newAcceptorSignal;
-    boost::mutex                                                                _handlerMutex;
-    std::map<boost::asio::ip::tcp::endpoint, std::shared_ptr<TcpAcceptorType> > _tcpAcceptorMap;
-    std::vector<std::shared_ptr<TcpAcceptorType> >                              _tcpAcceptorCleanUpList;
+    Logger                                                          _logger;
+    std::shared_ptr<boost::asio::ip::tcp::acceptor>                 _acceptor;
+    boost::asio::io_service&                                        _ioService;
+    Signal<TcpAcceptorPtrType>                                      _newAcceptorSignal;
+    boost::mutex                                                    _handlerMutex;
+    std::map<boost::asio::ip::tcp::endpoint, TcpAcceptorPtrType>    _tcpAcceptorMap;
+    std::vector<TcpAcceptorPtrType>                                 _tcpAcceptorCleanUpList;
 };
 
 

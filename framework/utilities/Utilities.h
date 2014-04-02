@@ -17,8 +17,8 @@ namespace vf_common
 {
 
 // branch prediction utilities
-#define likely(x)        __builtin_expect(!!(x), 1)
-#define unlikely(x)      __builtin_expect(!!(x), 0)
+#define LIKELY(x)        __builtin_expect(!!(x), 1)
+#define UNLIKELY(x)      __builtin_expect(!!(x), 0)
 
 class
 {
