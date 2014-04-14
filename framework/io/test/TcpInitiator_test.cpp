@@ -65,7 +65,7 @@ public:
         usleep(100);
 
         BOOST_TEST_MESSAGE("Sending buffer: " << std::string(buffer2->buffer(), buffer2->size()));
-        _handle.template asyncWrite<std::false_type>(buffer2);
+        _handle.template asyncWrite<false>(buffer2);
         usleep(100);
 
         BOOST_TEST_MESSAGE("Async write test");
@@ -117,7 +117,3 @@ BOOST_AUTO_TEST_CASE( TcpInitiator_Test_1 )
 
     BOOST_TEST_MESSAGE("Test case TcpInitiator_Test_1 completed");
 }
-
-
-
-

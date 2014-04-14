@@ -55,20 +55,29 @@ public:
         }
 
         _lastEndpoint = endpoint;
-        asyncRead();
+        asyncRead<ProtocolType>();
     }
 
-
-    template<typename UseStrand = std::true_type>
-    void asyncWrite(const std::string& message)
+    template<bool UseStrand = false>
+    /*virtual*/ void asyncWrite(const std::string& message)
     {
-        asyncWrite(message, UseStrand());
+        if(UNLIKELY(!_socket.is_open()))
+        {
+            return;
+        }
+
+        asyncWrite<ProtocolType, UseStrand>(message);
     }
 
-    template<typename UseStrand = std::true_type>
-    void asyncWrite(typename BufferPoolType::BufferPtrType buffer)
+    template<bool UseStrand = false>
+    /*virtual*/ void asyncWrite(typename BufferPoolType::BufferPtrType buffer)
     {
-        asyncWrite(buffer, UseStrand());
+        if(UNLIKELY(!_socket.is_open()))
+        {
+            return;
+        }
+
+        asyncWrite<ProtocolType, UseStrand>(buffer);
     }
 
     /*virtual*/ int syncWrite(const std::string& message)
@@ -192,85 +201,6 @@ public:
     }
 
 protected:
-
-    // TODO - decide if we are doing message buffer segmentation here or later ?? ??
-    /*virtual*/ void handleRead(const boost::system::error_code& error, size_t bytes_transferred, typename BufferPoolType::BufferPtrType buffer)
-    {
-        if (LIKELY(!error))
-        {
-            buffer->setSize(bytes_transferred);
-            processBuffer(buffer, InlineIO());
-            asyncRead();
-        }
-        else
-        {
-            VF_LOG_WARN(_logger, "Error reading data from endpoint: " << _lastEndpoint.address().to_string().c_str() << ":" << _lastEndpoint.port()
-                        << " with error [" << error.message().c_str() << "]. Attempting to disconnect.");
-            disconnect();
-        }
-
-        // destroy the buffer
-        _bufferFactory.destroy(buffer);
-    }
-
-    /*virtual*/ void asyncWrite(typename BufferPoolType::BufferPtrType buffer, std::true_type)
-    {
-        if(UNLIKELY(!_socket.is_open()))
-        {
-            return;
-        }
-
-        boost::asio::async_write(_socket,
-                boost::asio::buffer(buffer->buffer(), buffer->size()),
-                _writeStrand.wrap(boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, buffer, boost::asio::placeholders::error)));
-    }
-
-    /*virtual*/ void asyncWrite(typename BufferPoolType::BufferPtrType buffer, std::false_type)
-    {
-        if(UNLIKELY(!_socket.is_open()))
-        {
-            return;
-        }
-
-        boost::asio::async_write(_socket,
-                boost::asio::buffer(buffer->buffer(), buffer->size()),
-                boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, buffer, boost::asio::placeholders::error));
-    }
-
-    /*virtual*/ void asyncWrite(const std::string& message, std::true_type)
-    {
-        if(UNLIKELY(!_socket.is_open()))
-        {
-            return;
-        }
-
-        boost::asio::async_write(_socket,
-                boost::asio::buffer(message.data(), message.size()),
-                _writeStrand.wrap(boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, boost::asio::placeholders::error)));
-    }
-
-    /*virtual*/ void asyncWrite(const std::string& message, std::false_type)
-    {
-        if(UNLIKELY(!_socket.is_open()))
-        {
-            return;
-        }
-
-        boost::asio::async_write(_socket,
-                boost::asio::buffer(message.data(), message.size()),
-                boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, boost::asio::placeholders::error));
-    }
-
-    void processBuffer(typename BufferPoolType::BufferPtrType buffer, std::true_type)
-    {
-        _callbackSignal.dispatch(buffer);
-    }
-
-    /*virtual*/ void processBuffer(typename BufferPoolType::BufferPtrType buffer, std::false_type)
-    {
-        _callbackSignal.post(buffer);
-    }
-
     /*virtual*/ void handleIoError(const boost::system::error_code& error)
     {
         if(error)
@@ -282,6 +212,25 @@ protected:
                     << " with error [" << error.message().c_str() << ". Attempting to disconnect.");
             disconnect();
         }
+    }
+
+    /*virtual*/ void handleRead(const boost::system::error_code& error, size_t bytes_transferred, typename BufferPoolType::BufferPtrType buffer)
+    {
+        if (LIKELY(!error))
+        {
+            buffer->setSize(bytes_transferred);
+            processBuffer<InlineIO>(buffer);
+            asyncRead<ProtocolType>();
+        }
+        else
+        {
+            VF_LOG_WARN(_logger, "Error reading data from endpoint: " << _lastEndpoint.address().to_string().c_str() << ":" << _lastEndpoint.port()
+                        << " with error [" << error.message().c_str() << "]. Attempting to disconnect.");
+            disconnect();
+        }
+
+        // destroy the buffer
+        _bufferFactory.destroy(buffer);
     }
 
     /*virtual*/ void handleWrite(typename BufferPoolType::BufferPtrType buffer, const boost::system::error_code& error)
@@ -321,22 +270,118 @@ protected:
     boost::function<void (void)>                    _disconnectCallback;
 
 private:
-    void asyncRead()
+    template<typename T> // if T(InlineIO) is true
+    typename std::enable_if<T::value, void>::type
+    processBuffer(typename BufferPoolType::BufferPtrType buffer)
     {
-        if(UNLIKELY(!_socket.is_open()))
+        _callbackSignal.dispatch(buffer);
+    }
+
+    template<typename T> // if T(InlineIO) is false
+    typename std::enable_if<!T::value, void>::type
+    processBuffer(typename BufferPoolType::BufferPtrType buffer)
+    {
+        _callbackSignal.post(buffer);
+    }
+
+    template<typename T> // if T is udp
+    typename std::enable_if<std::is_same<T, boost::asio::ip::udp>::value, void>::type
+    asyncRead()
+    {
+        if(LIKELY(_socket.is_open()))
         {
-            return;
+            // get a new buffer from the factory
+            auto buffer = _bufferFactory.create();
+
+            _socket.async_receive_from(boost::asio::buffer(buffer->buffer(), buffer->capacity()), _lastEndpoint,
+                    boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleRead,
+                                this,
+                                boost::asio::placeholders::error,
+                                boost::asio::placeholders::bytes_transferred,
+                                buffer));
         }
+    }
 
-        // get a new buffer from the factory
-        auto buffer = _bufferFactory.create();
+    template<typename T> // if T is not udp
+    typename std::enable_if<!std::is_same<T, boost::asio::ip::udp>::value, void>::type
+    asyncRead()
+    {
+        if(LIKELY(_socket.is_open()))
+        {
+            // get a new buffer from the factory
+            auto buffer = _bufferFactory.create();
 
-        _socket.async_read_some(boost::asio::buffer(buffer->buffer(), buffer->capacity()),
-                boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleRead,
-                            this,
-                            boost::asio::placeholders::error,
-                            boost::asio::placeholders::bytes_transferred,
-                            buffer));
+            _socket.async_receive(boost::asio::buffer(buffer->buffer(), buffer->capacity()),
+                    boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleRead,
+                                this,
+                                boost::asio::placeholders::error,
+                                boost::asio::placeholders::bytes_transferred,
+                                buffer));
+        }
+    }
+
+    template<typename T, bool UseStrand> // UseStrand and UDP
+    typename std::enable_if<UseStrand && std::is_same<T, boost::asio::ip::udp>::value, void>::type
+    asyncWrite(typename BufferPoolType::BufferPtrType buffer)
+    {
+        _socket.async_send_to(boost::asio::buffer(buffer->buffer(), buffer->size()), _lastEndpoint,
+                _writeStrand.wrap(boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, buffer, boost::asio::placeholders::error)));
+    }
+
+    template<typename T, bool UseStrand> // UseStrand Not UDP
+    typename std::enable_if<UseStrand && !std::is_same<T, boost::asio::ip::udp>::value, void>::type
+    asyncWrite(typename BufferPoolType::BufferPtrType buffer)
+    {
+        _socket.async_send(boost::asio::buffer(buffer->buffer(), buffer->size()),
+                _writeStrand.wrap(boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, buffer, boost::asio::placeholders::error)));
+    }
+
+    template<typename T, bool UseStrand> // Not UseStrand and UDP
+    typename std::enable_if<!UseStrand && std::is_same<T, boost::asio::ip::udp>::value, void>::type
+    asyncWrite(typename BufferPoolType::BufferPtrType buffer)
+    {
+        _socket.async_send_to(boost::asio::buffer(buffer->buffer(), buffer->size()), _lastEndpoint,
+                boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, buffer, boost::asio::placeholders::error));
+    }
+
+    template<typename T, bool UseStrand> // Not UseStrand and Not UDP
+    typename std::enable_if<!UseStrand && !std::is_same<T, boost::asio::ip::udp>::value, void>::type
+    asyncWrite(typename BufferPoolType::BufferPtrType buffer)
+    {
+        _socket.async_send(boost::asio::buffer(buffer->buffer(), buffer->size()),
+                boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, buffer, boost::asio::placeholders::error));
+    }
+
+    template<typename T, bool UseStrand> // UseStrand and UDP
+    typename std::enable_if<UseStrand && std::is_same<T, boost::asio::ip::udp>::value, void>::type
+    asyncWrite(const std::string& message)
+    {
+        _socket.async_send_to(boost::asio::buffer(message.data(), message.size()), _lastEndpoint,
+                _writeStrand.wrap(boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, boost::asio::placeholders::error)));
+    }
+
+    template<typename T, bool UseStrand> // UseStrand and Not UDP
+    typename std::enable_if<UseStrand && !std::is_same<T, boost::asio::ip::udp>::value, void>::type
+    asyncWrite(const std::string& message)
+    {
+        _socket.async_send(boost::asio::buffer(message.data(), message.size()),
+                _writeStrand.wrap(boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, boost::asio::placeholders::error)));
+    }
+
+    template<typename T, bool UseStrand> // Not UseStrand and UDP
+    typename std::enable_if<!UseStrand && std::is_same<T, boost::asio::ip::udp>::value, void>::type
+    asyncWrite(const std::string& message)
+    {
+        _socket.async_send_to(boost::asio::buffer(message.data(), message.size()), _lastEndpoint,
+                boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, boost::asio::placeholders::error));
+    }
+
+    template<typename T, bool UseStrand> // Not UseStrand and Not UDP
+    typename std::enable_if<!UseStrand && !std::is_same<T, boost::asio::ip::udp>::value, void>::type
+    asyncWrite(const std::string& message)
+    {
+        _socket.async_send(boost::asio::buffer(message.data(), message.size()),
+                boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, boost::asio::placeholders::error));
     }
 
 };

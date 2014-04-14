@@ -107,7 +107,3 @@ BOOST_AUTO_TEST_CASE( Accept_test_1 )
 
     BOOST_TEST_MESSAGE("Test case Accept_test_1 completed");
 }
-
-
-
-
