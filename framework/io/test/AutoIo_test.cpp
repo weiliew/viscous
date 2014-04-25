@@ -201,12 +201,8 @@ public:
     bool onTimer()
     {
         // create and send message
-        // TODO Need factory here !
         auto payload = _handle.getBufferFactory().create();
 
-        // TODO - how to get size ???
-        //payload->setBuffer('\0', sizeof(PayloadType));
-        
         // get time now
         auto timeNow = std::chrono::high_resolution_clock::now();
        

@@ -95,7 +95,9 @@ public:
         boost::system::error_code error;
 
         // TODO - how to flush ??
-        transferred = boost::asio::write(_socket, boost::asio::buffer(message.data(), message.size()), boost::asio::transfer_all(), error);
+        //transferred = boost::asio::write(_socket, boost::asio::buffer(message.data(), message.size()), boost::asio::transfer_all(), error);
+        transferred = syncWrite<ProtocolType>(message, error);
+
         if (transferred < message.size() || error)
         {
             if(error)
@@ -128,7 +130,9 @@ public:
         boost::system::error_code error;
 
         // TODO - how to flush ??
-        transferred = boost::asio::write(_socket, boost::asio::buffer(buffer->buffer(), buffer->size()), boost::asio::transfer_all(), error);
+        //transferred = boost::asio::write(_socket, boost::asio::buffer(buffer->buffer(), buffer->size()), boost::asio::transfer_all(), error);
+        transferred = syncWrite<ProtocolType>(buffer, error);
+
         if (transferred < buffer->size() || error)
         {
             if(error)
@@ -384,6 +388,33 @@ private:
                 boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, boost::asio::placeholders::error));
     }
 
+    template<typename T> // sync op ignore UseStrand and UDP true
+    typename std::enable_if<std::is_same<T, boost::asio::ip::udp>::value, size_t>::type
+    syncWrite(typename BufferPoolType::BufferPtrType buffer, boost::system::error_code& error)
+    {
+        return _socket.send_to(boost::asio::buffer(buffer->buffer(), buffer->size()), _lastEndpoint, 0, error);
+    }
+
+    template<typename T> // sync op ignore UseStrand and UDP false
+    typename std::enable_if<!std::is_same<T, boost::asio::ip::udp>::value, size_t>::type
+    syncWrite(typename BufferPoolType::BufferPtrType buffer, boost::system::error_code& error)
+    {
+        return boost::asio::write(_socket, boost::asio::buffer(buffer->buffer(), buffer->size()), boost::asio::transfer_all(), error);
+    }
+
+    template<typename T> // sync op ignore UseStrand and UDP true
+    typename std::enable_if<std::is_same<T, boost::asio::ip::udp>::value, size_t>::type
+    syncWrite(const std::string& message, boost::system::error_code& error)
+    {
+        return _socket.send_to(boost::asio::buffer(message.data(), message.size()), _lastEndpoint, 0, error);
+    }
+
+    template<typename T> // sync op ignore UseStrand and UDP false
+    typename std::enable_if<!std::is_same<T, boost::asio::ip::udp>::value, size_t>::type
+    syncWrite(const std::string& message, boost::system::error_code& error)
+    {
+        return boost::asio::write(_socket, boost::asio::buffer(message.data(), message.size()), boost::asio::transfer_all(), error);
+    }
 };
 
 }  // namespace vf_common

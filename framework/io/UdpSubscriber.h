@@ -72,9 +72,12 @@ public:
 
     void disconnect(bool reconnect = true)
     {
-        _socket.set_option(boost::asio::ip::multicast::leave_group(boost::asio::ip::address::from_string(_mcAddr)));
-        _socket.close();
-        onDisconnect();
+        if(_connected)
+        {
+            _socket.set_option(boost::asio::ip::multicast::leave_group(boost::asio::ip::address::from_string(_mcAddr)));
+            _socket.close();
+            onDisconnect();
+        }
     }
 
     virtual void onConnect()

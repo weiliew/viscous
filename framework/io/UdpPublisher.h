@@ -70,8 +70,11 @@ public:
 
     void disconnect(bool reconnect = true)
     {
-        _socket.close();
-        onDisconnect();
+        if(_connected)
+        {
+            _socket.close();
+            onDisconnect();
+        }
     }
 
     virtual void onConnect()
