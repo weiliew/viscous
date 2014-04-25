@@ -74,10 +74,10 @@ BOOST_AUTO_TEST_CASE( Publish_test_1 )
     PubTimer<UdpPublisherType> pubTimer(publisher);
     pubTimer.setInterval(2); // 2 seconds
 
-    BOOST_CHECK(publisher.start("239.255.0.1", boost::unit_test::framework::master_test_suite().argv[1], boost::unit_test::framework::master_test_suite().argv[2]));
-
     std::shared_ptr<std::thread> thread1 = std::make_shared<std::thread>(boost::bind(&boost::asio::io_service::run, &publisher.getIO()));
     thread1->detach();
+
+    BOOST_CHECK(publisher.start("239.255.0.1", boost::unit_test::framework::master_test_suite().argv[1], boost::unit_test::framework::master_test_suite().argv[2]));
 
     if(publisher.connected())
     {

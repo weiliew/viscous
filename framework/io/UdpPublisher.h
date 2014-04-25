@@ -50,14 +50,11 @@ public:
         try
         {
             _socket.open(_lastEndpoint.protocol());
-            _socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
 
             if(!_interface.empty())
             {
                 _socket.set_option(boost::asio::ip::multicast::outbound_interface(boost::asio::ip::address::from_string(_interface).to_v4()));
             }
-
-            //_socket.connect(_lastEndpoint);
 
             onConnect();
             return true;
@@ -80,6 +77,9 @@ public:
     virtual void onConnect()
     {
         // TODO - config
+        _socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
+        _socket.set_option(boost::asio::ip::multicast::enable_loopback(true));
+
         _socket.set_option(boost::asio::socket_base::receive_buffer_size(16777216)); // 16MB buffer size
         _socket.set_option(boost::asio::socket_base::send_buffer_size(16777216)); // 16MB buffer size
 

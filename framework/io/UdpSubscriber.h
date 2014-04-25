@@ -31,6 +31,7 @@ public:
 
     UdpSubscriber(Logger& logger)
     : BaseType(logger)
+    , _connected(false)
     {
     }
 
@@ -49,9 +50,13 @@ public:
         {
             _socket.open(_lastEndpoint.protocol());
             _socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
-            _socket.bind(_lastEndpoint);
-            _socket.set_option(boost::asio::ip::multicast::join_group(boost::asio::ip::address::from_string(_mcAddr)));
-            //_socket.connect(_lastEndpoint);
+            _socket.set_option(boost::asio::ip::multicast::enable_loopback(true));
+
+            //_socket.bind(_lastEndpoint);
+            // workaround for binding to interface in Linux - http://thread.gmane.org/gmane.comp.lib.boost.asio.user/609
+            _socket.bind(boost::asio::ip::udp::endpoint(boost::asio::ip::address::from_string(_mcAddr), _lastEndpoint.port()));
+            _socket.set_option(boost::asio::ip::multicast::join_group(boost::asio::ip::address::from_string(_mcAddr).to_v4(),
+                                                                      _lastEndpoint.address().to_v4()));
 
             onConnect();
             return true;
