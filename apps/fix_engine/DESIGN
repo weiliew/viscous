@@ -1,0 +1,22 @@
+io -> 
+parse message -> fast parser
+                 buffer message -> fixParser + attach data dictionary reference
+                 + getter and setter functions based on fid and field name via data dictionary reference
+                 
+TCP callback model => 
+Option 1 =>
+Single threaded TCP receiver => Single threaded parser and message consolidator => multi threaded executor (per instrument)
+Disadvantage - single threaded till executor
+
+Option 2 =>
+Multi threaded TCP receiver (how to preserve sequence ?) => multi threaded parser/executor (per instrument)
+Disadvantage - Hard to preserve sequencce early in the receiver stage - and will pollute receiver with application specific logic
+
+Next steps -
+1. FIXIOHandler - message callback consolidator - hook into Tcp Initiator and acceptor
+2. Unit test for FIXMsg
+
+Option 3 => 
+Creae a buffer factory for fix message - when call to create a new buffer, pre-copy the prev message onto the buffer
+Disadvantage - the factory need to be single threaded
+
