@@ -27,7 +27,7 @@
 namespace vf_common
 {
 
-template<typename Logger, typename BufferPoolType, typename SignalType, typename ProtocolType, typename InlineIO = std::true_type>
+template<typename Logger, typename BufferPoolType, typename SignalType, typename ProtocolType, typename InlineIO>
 class IO
 {
 public:

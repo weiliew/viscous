@@ -76,12 +76,10 @@ link_directories(
 # Add linker flag
 add_definitions (-D__STDC_FORMAT_MACROS)
 
-set (MY_BUILD_LIST 
-    framework
-)
-
 include_directories (framework)
 add_subdirectory (framework)
 
+# Apps build
+add_subdirectory (apps)
 
 

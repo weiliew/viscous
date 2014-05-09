@@ -41,6 +41,12 @@ public:
     {
     }
 
+    void clear()
+    {
+        bufferSize_ = 0;
+        // Lazy clear - std::fill(buffer_.begin(), buffer_.end(), 0);
+    }
+
     FixedBuffer(const FixedBuffer<BufferSize>& copy)
     {
         std::copy(copy.buffer_.begin(), copy.buffer_.end(), buffer_.begin());
@@ -80,27 +86,7 @@ public:
             buffer_.pop();
         }
     }
-/*
-    value_type& top()
-    {
-        if(UNLIKELY(bufferSize_ == 0))
-        {
-            return value_type();
-        }
 
-        return buffer_[0];
-    }
-
-    const value_type& top() const
-    {
-        if(UNLIKELY(bufferSize_ == 0))
-        {
-            return value_type();
-        }
-
-        return buffer_[0];
-    }
-*/
     size_t size() const
     {
         return bufferSize_;
@@ -120,6 +106,19 @@ public:
     {
         return buffer_.data();
     }
+
+    void appendBuffer(const char * buffer, size_t len)
+    {
+        if(UNLIKELY(len > BufferSize - bufferSize_))
+        {
+            // TODO - truncate and copy ?
+            return;
+        }
+
+        memcpy(buffer_.data()+bufferSize_, buffer, len); // TODO memcpy or std::copy
+        bufferSize_ += len;
+    }
+
 
     void setBuffer(const char * buffer, size_t len)
     {
@@ -160,19 +159,7 @@ public:
     {
         bufferSize_ = size;
     }
-/*
-    std::ostream& operator<< (const char val[])
-    {
-        std::ostream toRet;
-        return toRet << std::string(buffer_, bufferSize_) << val;
-    }
 
-    std::ostream& operator<< (std::ostream& val)
-    {
-        std::ostream toRet;
-        return std::ostream(std::string(buffer_, bufferSize_) << val);
-    }
-*/
 private:
     storage_type                    buffer_;
     size_t                          bufferSize_;

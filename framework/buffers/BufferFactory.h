@@ -99,6 +99,7 @@ public:
 
     void destroy(value_ptr_type buffer)
     {
+        buffer->clear();
         _pool.release(buffer);
     }
 

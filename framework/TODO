@@ -1,3 +1,23 @@
-1. UDP io
-2. viscous message model
-3. co-routine io, and framework
+1. UDP io - DONE
+2. viscous message model - PARTIAL (message pool done - but not message model)
+3. co-routine io, and framework 
+4. sample application - use framework + config + log
+5. evaluate boost log ??
+6. sample application use boost apirit parsing model ??
+7. threading model ??
+
+APPS -
+what apps ? 
+- bloomberg ?
+- opra ?
+- nasdaq ?
+- cts/cqs ?
+- order entry ?
+- fix engine ?
+
+** Figure out how to handle handoffs between io and listener - in the case of TCP where there may be partial messages ....
+1. Callback to peek and get expected msg len ? (not efficient in terms of socket read ?? + asio ??)
+2. Callback client to store and apply partial message (not for threaded model)
+3. io to store partial message (not for threaded model)
+
+4. FixedBuffer - deallocator or destroy function to put back into factory
