@@ -37,32 +37,30 @@ public:
     typedef typename storage_type::iterator         iterator;
     typedef typename storage_type::const_iterator   const_iterator;
 
-    // TODO - add variadic template paraams to the factory create function
-
     FIXMsg()
-    //: _factory    (NULL)
     : _complete   (false)
     , _parsed     (false)
     {
+        memset(&_scratchSpace, 0, sizeof(_scratchSpace));
     }
 
 
     FIXMsg(const FIXMsg<BufferType>& copy)
-    //: _factory      (copy._factory)
     : _bufferStore  (copy._bufferStore)
     , _complete     (copy._complete)
     , _parsed       (copy._parsed)
     {
+        memset(&_scratchSpace, 0, sizeof(_scratchSpace));
     }
 
     FIXMsg<BufferType>& operator=(const FIXMsg<BufferType>& copy)
     {
         if(this != &copy)
         {
-            //_factory        = copy._factory;
             _bufferStore    = copy._bufferStore;
             _complete       = copy._complete;
             _parsed         = copy._parsed;
+            memcpy(&_scratchSpace, &copy._scratchSpace, sizeof(_scratchSpace));
         }
         return *this;
     }
@@ -71,10 +69,10 @@ public:
     {
         if(this != &copy)
         {
-            //_factory  = copy._factory;
             _bufferStore.copy(copy._bufferStore);
             _complete = copy._complete;
             _parsed   = copy._parsed;
+            memcpy(&_scratchSpace, &copy._scratchSpace, sizeof(_scratchSpace));
         }
     }
 
@@ -104,9 +102,13 @@ public:
         return true;
     }
 
-    // returns true if a complete FIX message is available in the buffer, stores the rest of the buffer back into the
-    // cache store in the factory for next use
-    bool getFIXMsg()
+    /* Attempts to identify a complete fix message in the buffer
+     * Returns
+     *      the number of bytes consumes from the buffer if a complete fix message is available in the buffer
+     *      0 if buffer does not contain a complete fix
+     *      -1 if buffer contains an invalid fix message
+     */
+    int getCompleteMsg()
     {
         char * buffer = _bufferStore.buffer();
         size_t len = _bufferStore.size();
@@ -117,26 +119,14 @@ public:
         // sanity check to see if we got enough data
         if(len < 10)
         {
-            /* TODO
-            if(LIKELY(_factory))
-            {
-                _factory->cachePartialMessage(_bufferStore, 0);
-            }
-            */
-            return false; // don't have a complete message
+            return 0; // don't have a complete message
         }
 
         // find start of message
         const unsigned char * sep = (const unsigned char *) memchr(buffer, SOH, len);
         if(!sep)
         {
-            /* TODO
-            if(LIKELY(_factory))
-            {
-                _factory->cachePartialMessage(_bufferStore, 0);
-            }
-            */
-            return false; // don't have a complete message
+            return 0; // don't have a complete message
         }
         ++sep;
 
@@ -144,48 +134,25 @@ public:
         const unsigned char * sepEnd = (const unsigned char *) memchr(sep, SOH, len-((char*)sep-buffer));
         if(!sepEnd)
         {
-            /* TODO
-            if(LIKELY(_factory))
-            {
-                _factory->cachePartialMessage(_bufferStore, 0);
-            }
-            */
-            return false; // don't have a complete message
+            return 0; // don't have a complete message
         }
 
         // verify FIX message
         if(sep[0] != '9' || buffer[0] != '8')
         {
-            // invalid FIX message
-            return false;
+            return -1; // not a valid fix message
         }
         sep+=2; // move to the size value
 
-        char strLen[24];
-        memcpy(&strLen, sep, sepEnd-sep);
-        int totalLenNeeded = atoi(strLen) + ((char*)sepEnd-buffer) + 7; // plus checksum 10=xxx|
+        memcpy(&_scratchSpace, sep, sepEnd-sep);
+        int totalLenNeeded = atoi(_scratchSpace) + ((char*)sepEnd-buffer) + 7; // plus checksum 10=xxx|
 
         if(totalLenNeeded > len)
         {
-            /* TODO
-            if(LIKELY(_factory))
-            {
-                _factory->cachePartialMessage(_bufferStore, 0);
-            }
-            */
-            return false; // don't have a complete message
+            return 0; // still don't have a complete message
         }
 
-        // got a complete FIX message, store the remainder
-        if(len > totalLenNeeded)
-        {
-            /* TODO
-            if(LIKELY(_factory))
-            {
-                _factory->cachePartialMessage(_bufferStore, totalLenNeeded);
-            }
-            */
-        }
+        // got a complete FIX message from this point onwards
 
         // message does not end with SOH, invalid data ?! we are adding our own SOH for now.
         if(buffer[totalLenNeeded-1] != SOH)
@@ -196,7 +163,7 @@ public:
         }
 
         _complete = true;
-        return true;
+        return totalLenNeeded;
     }
 
     // interface for getting the underlying buffer store - for direct set and get
@@ -244,6 +211,11 @@ public:
         return _bufferStore.buffer();
     }
 
+    void appendBuffer(const char * buffer, size_t len)
+    {
+        _bufferStore.appendBuffer(buffer, len);
+    }
+
     void setBuffer(const char * buffer, size_t len)
     {
         _bufferStore.setBuffer(buffer, len);
@@ -279,15 +251,8 @@ public:
         return _parsed;
     }
 
-    /* TODO
-    void setFactory(FIXMessageFactory* factory)
-    {
-        _factory = factory;
-    }
-    */
-
 private:
-    // TODO - FIXMessageFactory*  _factory;
+    char                _scratchSpace[24];
     BufferType          _bufferStore;
     bool                _complete;
     bool                _parsed;

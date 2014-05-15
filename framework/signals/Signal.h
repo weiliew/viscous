@@ -23,6 +23,8 @@ template<typename PayloadType>
 class Signal : public SignalBase
 {
 public:
+    typedef PayloadType ElementType;
+
     Signal(const char * name, boost::asio::io_service& ioService)
     : SignalBase(name, ioService)
     {
@@ -104,6 +106,8 @@ template<typename PayloadType>
 class Signal<PayloadType *> : public SignalBase
 {
 public:
+    typedef PayloadType *  ElementType;
+
     Signal(const char * name, boost::asio::io_service& ioService)
     : SignalBase(name, ioService)
     {

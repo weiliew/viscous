@@ -46,6 +46,34 @@ private:
 
 };
 
+template<typename BufferType>
+class SharedPtrBufferFactory
+{
+public:
+    typedef std::shared_ptr<BufferType>  ElementType;
+
+    SharedPtrBufferFactory()
+    {
+    }
+
+    ~SharedPtrBufferFactory()
+    {
+    }
+
+    std::shared_ptr<BufferType> create()
+    {
+        return std::make_shared<BufferType>();
+    }
+
+    void destroy(std::shared_ptr<BufferType> buffer)
+    {
+        // no-op
+    }
+
+private:
+
+};
+
 template<typename PoolType>
 class PooledBufferFactory
 {

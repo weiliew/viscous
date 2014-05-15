@@ -21,3 +21,6 @@ what apps ?
 3. io to store partial message (not for threaded model)
 
 4. FixedBuffer - deallocator or destroy function to put back into factory
+
+5. Latency checking class utilities - encapsulates latency checking and result collection
+

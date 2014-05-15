@@ -21,6 +21,8 @@
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/median.hpp>
 #include <boost/asio/io_service.hpp>
+#include "signals/Signal.h"
+#include "buffers/MessageBuilder.h"
 
 #include "apps/fix_engine/message/FIXMessagePoolDefs.h"
 #include "apps/fix_engine/message/FIXMessageDecoder.h"
@@ -36,54 +38,99 @@ void testFIXMessage(FIXMsgType msg)
 {
     BOOST_CHECK(msg->parseFIXMessage());
     BOOST_CHECK(msg->parsed() && msg->complete());
+    BOOST_CHECK(msg->size() == 40);
 }
 
-template<typename PoolDefs>
+template<typename FIXMsgType>
+class Sub
+{
+public:
+    Sub()
+    : _count(0)
+    {
+
+    }
+
+    void onData(FIXMsgType& payload)
+    {
+        testFIXMessage(payload);
+        ++_count;
+    }
+
+    int _count;
+};
+
+
+template<typename PoolDefs, typename InlineIO>
 void runTest()
 {
-    // create and prime message factory
-    typename PoolDefs::PooledFactoryType bufferFactory(0);
-
     // total of 10 FIX messages
     std::vector<std::string> inputArray = {
         std::string("8=FIX4.4") + (char) SOH + "9=",
-        std::string("19") + (char) SOH + "35=D" + (char) SOH + "49=001" + (char) SOH + "56=YYY" + (char) SOH + "10=123" + (char) SOH,
-        std::string("8=FIX4.4") + (char) SOH + "9=19" + (char) SOH + "35=D" + (char) SOH + "49=002" + (char) SOH + "56=YYY" + (char) SOH + "10=123" + (char) SOH,
-        std::string("8=FIX4.4") + (char) SOH + "9=19" + (char) SOH + "35=D" + (char) SOH + "49=003" + (char) SOH + "56=YYY" + (char) SOH + "10=123" + (char) SOH +
-        std::string("8=FIX4.4") + (char) SOH + "9=19" + (char) SOH + "35=D" + (char) SOH + "49=004" + (char) SOH,
+        std::string("20") + (char) SOH + "35=D" + (char) SOH + "49=001" + (char) SOH + "56=YYY" + (char) SOH + "10=123" + (char) SOH,
+        std::string("8=FIX4.4") + (char) SOH + "9=20" + (char) SOH + "35=D" + (char) SOH + "49=002" + (char) SOH + "56=YYY" + (char) SOH + "10=123" + (char) SOH,
+        std::string("8=FIX4.4") + (char) SOH + "9=20" + (char) SOH + "35=D" + (char) SOH + "49=003" + (char) SOH + "56=YYY" + (char) SOH + "10=123" + (char) SOH +
+        std::string("8=FIX4.4") + (char) SOH + "9=20" + (char) SOH + "35=D" + (char) SOH + "49=004" + (char) SOH,
         std::string("56=YYY") + (char) SOH + "10=123" + (char) SOH,
-        std::string("8=FIX4.4") + (char) SOH + "9=19" + (char) SOH + "35=D" + (char) SOH + "49=005" + (char) SOH + "56=YYY" + (char) SOH + "10=123" + (char) SOH +
-        std::string("8=FIX4.4") + (char) SOH + "9=19" + (char) SOH + "35=D" + (char) SOH + "49=006" + (char) SOH + "56=YYY" + (char) SOH + "10=123" + (char) SOH +
-        std::string("8=FIX4.4") + (char) SOH + "9=19" + (char) SOH + "35=D" + (char) SOH + "49=007" + (char) SOH + "56=YYY" + (char) SOH + "10=123" + (char) SOH,
-        std::string("8=FIX4.4") + (char) SOH + "9=19" + (char) SOH + "35=D" + (char) SOH + "49=008" + (char) SOH + "56=YYY" + (char) SOH + "10=123" + (char) SOH +
-        std::string("8=FIX4.4") + (char) SOH + "9=19" + (char) SOH + "35=D" + (char) SOH + "49=009" + (char) SOH + "56=YYY" + (char) SOH + "10=123" + (char) SOH +
-        std::string("8=FIX4.4") + (char) SOH + "9=19" + (char) SOH + "35=D" + (char) SOH + "49=010" + (char) SOH + "56=YYY" + (char) SOH + "10=123" + (char) SOH
+        std::string("8=FIX4.4") + (char) SOH + "9=20" + (char) SOH + "35=D" + (char) SOH + "49=005" + (char) SOH + "56=YYY" + (char) SOH + "10=123" + (char) SOH +
+        std::string("8=FIX4.4") + (char) SOH + "9=20" + (char) SOH + "35=D" + (char) SOH + "49=006" + (char) SOH + "56=YYY" + (char) SOH + "10=123" + (char) SOH +
+        std::string("8=FIX4.4") + (char) SOH + "9=20" + (char) SOH + "35=D" + (char) SOH + "49=007" + (char) SOH + "56=YYY" + (char) SOH + "10=123" + (char) SOH,
+        std::string("8=FIX4.4") + (char) SOH + "9=20" + (char) SOH + "35=D" + (char) SOH + "49=008" + (char) SOH + "56=YYY" + (char) SOH + "10=123" + (char) SOH +
+        std::string("8=FIX4.4") + (char) SOH + "9=20" + (char) SOH + "35=D" + (char) SOH + "49=009" + (char) SOH + "56=YYY" + (char) SOH + "10=123" + (char) SOH +
+        std::string("8=FIX4.4") + (char) SOH + "9=20" + (char) SOH + "35=D" + (char) SOH + "49=010" + (char) SOH + "56=YYY" + (char) SOH + "10=",
+        std::string("1"),
+        std::string("23"),
+        std::string("") + (char) SOH + "gibberish"
     };
 
-    for(int count=0;count<inputArray.size();++count)
-    {
-        auto msg = bufferFactory.create();
-        msg->setBuffer(inputArray[count].data(), inputArray[count].length());
-        if(msg->getFIXMsg())
-        {
-            testFIXMessage(msg);
-        }
+    // create the signals
+    boost::asio::io_service io;
+    boost::asio::io_service::work work(io);
 
-        while(bufferFactory.getCachedSize() > 20)
-        {
-            // attempt to consume the next FIX message from the cache
-            auto cached = bufferFactory.create();
-            if(cached->getFIXMsg())
-            {
-                testFIXMessage(cached);
-            }
-            else
-            {
-                // cached buffer is not a complete fix message
-                break;
-            }
-        }
+    typedef typename PoolDefs::BufferPtrType        MessagePtrType;
+    typedef Signal<MessagePtrType>                  SignalType;
+    typedef typename PoolDefs::PooledFactoryType    FactoryType;
+
+    FactoryType bufferFactory(0);
+
+    SignalFactory<SignalType> signalFactory("SIG", io);
+    auto inputSignal = signalFactory.create();
+    auto outputSignal = signalFactory.create();
+
+    FactoryType msgFactory;
+    MessageBuilder<std::shared_ptr<SignalType>, FactoryType, InlineIO> msgBuilder(outputSignal, msgFactory);
+
+    inputSignal->subscribe(&msgBuilder, 100);
+
+    // create the subscriber
+    Sub<MessagePtrType> sub;
+    outputSignal->subscribe(&sub, 100);
+
+    if(InlineIO::value == false)
+    {
+        inputSignal->run();
+        outputSignal->run();
     }
+
+    std::for_each(inputArray.begin(), inputArray.end(), [&inputSignal, &msgFactory](std::string msg){
+        auto fixMsg = msgFactory.create();
+        fixMsg->setBuffer(msg.data(), msg.size());
+        if(InlineIO::value == true)
+        {
+            inputSignal->dispatch(fixMsg);
+        }
+        else
+        {
+            inputSignal->post(fixMsg);
+        }
+    });
+
+    // check that we are getting all the messages in the end
+    sleep(1);
+
+    // check result
+    BOOST_CHECK(sub._count == inputArray.size());
+
 
     BOOST_MESSAGE("Test finished with factory type: " << typeid(bufferFactory).name());
     BOOST_CHECK(true);
@@ -91,14 +138,13 @@ void runTest()
 
 BOOST_AUTO_TEST_CASE( MessagePool_test_1 )
 {
-    runTest<LockingFIXMsg2k>();
+    runTest<LockingFIXMsg2k, std::true_type>();
+    runTest<LockingFIXMsg2k, std::false_type>();
 }
 
 BOOST_AUTO_TEST_CASE( MessagePool_test_2 )
 {
-    runTest<LockFreeFIXMsg2k>();
+    runTest<LockFreeFIXMsg2k, std::true_type>();
+    runTest<LockFreeFIXMsg2k, std::false_type>();
 }
-
-
-
 
