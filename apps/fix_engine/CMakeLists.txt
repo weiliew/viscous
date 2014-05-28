@@ -9,6 +9,7 @@ set (BIN_NAME fix_engine)
 MESSAGE("Processing application build [${CMAKE_CURRENT_SOURCE_DIR}]")
 
 add_subdirectory(message)
+add_subdirectory(dictionary)
 
 EXECUTE_PROCESS(
     COMMAND find ${CMAKE_CURRENT_SOURCE_DIR} -maxdepth 1 -name *.cpp

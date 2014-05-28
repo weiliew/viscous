@@ -24,3 +24,11 @@ what apps ?
 
 5. Latency checking class utilities - encapsulates latency checking and result collection
 
+6. Co-routine implementatiion and re-factor architecture/ streamline architecture to remove unused options etc
+
+TODO next -
+FIX message parsing and processing
+FIX Dictionary processing
+FIX IO - initiator and acceptor
+
+# use xlst to build constexpr lookup table for the data dictionary including template for the messages and components, groups containers etc
