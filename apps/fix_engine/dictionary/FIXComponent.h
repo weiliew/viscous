@@ -107,10 +107,7 @@ public:
         }
 
         field->setComponentField(group);
-
-        // else the added component is a group type
-        _orderedFields.push_back(field);
-        _isFieldRequired.push_back(required);
+        addField(field, required);
     }
 
     std::ostream& dump(std::ostream& oss) const
@@ -130,7 +127,7 @@ public:
         }
         oss << hdr << " name: " << _name << " type: " << _type << std::endl;
         for_each(_orderedFields.begin(), _orderedFields.end(), [this, &oss](std::shared_ptr<FIXField> field){
-            oss << *field << std::endl;
+            oss << "    " << *field << std::endl;
         });
 
         return oss;
@@ -197,12 +194,11 @@ private:
     char                                                    _msgType[2];            // MESSAGE type only
 };
 
-std::ostream& operator<<(std::ostream& oss, const FIXComponent& comp)
+} // namespace vf_fix
+
+std::ostream& operator<<(std::ostream& oss, const vf_fix::FIXComponent& comp)
 {
     return comp.dump(oss);
 }
-
-}  // namespace vf_fix
-
 
 #endif /* FIXCOMPONENT_H_ */

@@ -80,6 +80,45 @@ BOOST_AUTO_TEST_CASE( FIXDictionary_test_5 )
     Logger<StdoutSink> logger(stdoutSink, LogDebug);
 
     FIXDictionary<Logger<StdoutSink>> dict(logger);
+    dict.load(std::string(boost::unit_test::framework::master_test_suite().argv[1]) + "/FIX50.xml",
+            std::string(boost::unit_test::framework::master_test_suite().argv[1]) + "/FIXT11.xml");
+
+    VF_LOG_INFO(logger, dict);
+}
+
+BOOST_AUTO_TEST_CASE( FIXDictionary_test_6 )
+{
+    StdoutSink stdoutSink;
+    stdoutSink.open();
+    Logger<StdoutSink> logger(stdoutSink, LogDebug);
+
+    FIXDictionary<Logger<StdoutSink>> dict(logger);
+    dict.load(std::string(boost::unit_test::framework::master_test_suite().argv[1]) + "/FIX50SP1.xml",
+            std::string(boost::unit_test::framework::master_test_suite().argv[1]) + "/FIXT11.xml");
+
+    VF_LOG_INFO(logger, dict);
+}
+
+BOOST_AUTO_TEST_CASE( FIXDictionary_test_7 )
+{
+    StdoutSink stdoutSink;
+    stdoutSink.open();
+    Logger<StdoutSink> logger(stdoutSink, LogDebug);
+
+    FIXDictionary<Logger<StdoutSink>> dict(logger);
+    dict.load(std::string(boost::unit_test::framework::master_test_suite().argv[1]) + "/FIX50SP2.xml",
+            std::string(boost::unit_test::framework::master_test_suite().argv[1]) + "/FIXT11.xml");
+
+    VF_LOG_INFO(logger, dict);
+}
+
+BOOST_AUTO_TEST_CASE( FIXDictionary_test_8 )
+{
+    StdoutSink stdoutSink;
+    stdoutSink.open();
+    Logger<StdoutSink> logger(stdoutSink, LogDebug);
+
+    FIXDictionary<Logger<StdoutSink>> dict(logger);
     dict.load(std::string(boost::unit_test::framework::master_test_suite().argv[1]) + "/FIX44.xml");
 
     VF_LOG_INFO(logger, dict);

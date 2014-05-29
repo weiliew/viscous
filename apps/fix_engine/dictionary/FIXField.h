@@ -303,7 +303,7 @@ public:
         return _type == NUM_IN_GROUP;
     }
 
-    std::shared_ptr<FIXComponent> getComponent()
+    std::shared_ptr<FIXComponent> getComponent()const
     {
         return _componentField;
     }
@@ -315,12 +315,7 @@ public:
 
     std::ostream& dump(std::ostream& oss) const
     {
-        oss << "FID: "<< _fid << ", NAME: " << _name << ", TYPE: " << _typeName;
-        if(_componentField.get())
-        {
-            //oss << *_componentField;
-        }
-
+        oss << "FID: "<< _fid << ", NAME: " << _name << ", TYPE: " << _typeName << ", IS_GROUP: " << (_componentField.get() ? "YES" : "NO");
         return oss;
     }
 
@@ -338,12 +333,13 @@ private:
     std::shared_ptr<FIXComponent>                   _componentField;
 };
 
-std::ostream& operator<<(std::ostream& oss, const FIXField& field)
+}  // namespace vf_fix
+
+
+std::ostream& operator<<(std::ostream& oss, const vf_fix::FIXField& field)
 {
     return field.dump(oss);
 }
-
-}  // namespace vf_fix
 
 
 #endif /* FIXFIELD_H_ */

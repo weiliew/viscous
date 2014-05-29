@@ -56,8 +56,50 @@ public:
     {
     }
 
-    bool load(const std::string& filename)
+    bool load(const std::string& filename, const std::string& transportFilename = "")
     {
+        try
+        {
+            if(!transportFilename.empty())
+            {
+                boost::property_tree::read_xml(filename.c_str(), _ptreeTransport);
+
+                // get the root container and its attributes
+                ptree fixNode = _ptreeTransport.get_child("fix");
+
+                _versionTransportMajor = _ptreeTransport.get<unsigned int>("fix.<xmlattr>.major");
+                _versionTransportMinor = _ptreeTransport.get<unsigned int>("fix.<xmlattr>.minor");
+                _versionTransportServicePack = _ptreeTransport.get<unsigned int>("fix.<xmlattr>.servicepack");
+                _versionTransportType = _ptreeTransport.get<std::string>("fix.<xmlattr>.type");
+
+                // parse the field definitions
+                parseFieldList(fixNode.get_child("fields"));
+
+                // parse the component definitions
+                parseComponentList(fixNode.get_child("components"));
+
+                // parse the headers, messages and trailers
+                _header = parseComponent("component", fixNode.get_child("header"), "header");
+                _trailer = parseComponent("component", fixNode.get_child("trailer"), "trailer");
+            }
+        }
+        catch(boost::exception& except)
+        {
+            VF_LOG_WARN(_logger, "Failed to load data dictionary [" << transportFilename << "] due to exception [" << boost::diagnostic_information(except) << "].");
+            return false;
+        }
+        catch(std::exception& except)
+        {
+            VF_LOG_WARN(_logger, "Failed to load data dictionary [" << transportFilename << "] due to exception [" << except.what() << "].");
+            return false;
+        }
+        catch(...)
+        {
+            // unknown exception
+            VF_LOG_WARN(_logger, "Failed to load data dictionary [" << transportFilename << "] due to unknown exception.");
+            return false;
+        }
+
         try
         {
             // parses the fix data dictionary
@@ -71,18 +113,22 @@ public:
             _versionServicePack = _ptree.get<unsigned int>("fix.<xmlattr>.servicepack");
             _versionType = _ptree.get<std::string>("fix.<xmlattr>.type");
 
-            // parse the field definitions
-            parseFieldList(fixNode.get_child("fields"));
+            if(transportFilename.empty())
+            {
+                // parse the field definitions
+                parseFieldList(fixNode.get_child("fields"));
 
-            // parse the component definitions
-            parseComponentList(fixNode.get_child("components"));
+                // parse the component definitions
+                parseComponentList(fixNode.get_child("components"));
 
-            // parse the headers, messages and trailers
-            _header = parseComponent("component", fixNode.get_child("header"), "header");
-            _trailer = parseComponent("component", fixNode.get_child("trailer"), "trailer");
+                // parse the headers, messages and trailers
+                _header = parseComponent("component", fixNode.get_child("header"), "header");
+                _trailer = parseComponent("component", fixNode.get_child("trailer"), "trailer");
+            }
 
             // parse all the message types
             parseComponentList(fixNode.get_child("messages"));
+
         }
         catch(boost::exception& except)
         {
@@ -168,25 +214,25 @@ public:
 
     std::ostream& dump(std::ostream& oss) const
     {
-        oss << "\nHEADER\n" << *_header << std::endl;
-        oss << "TRAILER\n" << *_trailer << std::endl;
+        oss << "\nHEADER\n" << "  " << *_header << std::endl;
+        oss << "TRAILER\n"  << "  " << *_trailer << std::endl;
         oss << "FIELDS\n";
 
         for_each(_fieldMap.begin(), _fieldMap.end(), [&oss](std::pair<unsigned int, std::shared_ptr<FIXField>> fieldPair){
-            oss << *fieldPair.second << std::endl;
+            oss << "  " << *fieldPair.second << std::endl;
         });
 
         oss << "GROUP\n";
         for_each(_groupMap.begin(), _groupMap.end(), [&oss](std::pair<unsigned int, std::shared_ptr<FIXComponent>> componentPair) {
-            oss << *componentPair.second << std::endl;
+            oss << "  "<< *componentPair.second << std::endl;
         });
         oss << "COMPONENT\n";
         for_each(_componentMap.begin(), _componentMap.end(), [&oss](std::pair<const char *, std::shared_ptr<FIXComponent>> componentPair) {
-            oss << *componentPair.second << std::endl;
+            oss << "  "<< *componentPair.second << std::endl;
         });
         oss << "MSGTYPE\n";
         for_each(_msgTypeMap.begin(), _msgTypeMap.end(), [&oss](std::pair<const char *, std::shared_ptr<FIXComponent>> componentPair) {
-            oss << *componentPair.second << std::endl;
+            oss << "  "<< *componentPair.second << std::endl;
         });
 
         return oss;
@@ -329,12 +375,19 @@ private:
 
     Logger                      _logger;
     boost::property_tree::ptree _ptree;
+    boost::property_tree::ptree _ptreeTransport;
+
     bool                        _parsed;
 
     unsigned int                _versionMajor;
     unsigned int                _versionMinor;
     unsigned int                _versionServicePack;
     std::string                 _versionType;
+
+    unsigned int                _versionTransportMajor;
+    unsigned int                _versionTransportMinor;
+    unsigned int                _versionTransportServicePack;
+    std::string                 _versionTransportType;
 
     std::shared_ptr<FIXComponent> _header;
     std::shared_ptr<FIXComponent> _trailer;
@@ -346,13 +399,12 @@ private:
     std::unordered_map<const char *, std::shared_ptr<FIXComponent>, str_hash, str_eq> _msgTypeMap;        // TODO - instead of const char * - can be more efficient as we knoe msg type is 2 char
 };
 
+}  // namespace vf_fix
+
 template<typename Logger>
-std::ostream& operator<<(std::ostream& oss, const FIXDictionary<Logger>& dict)
+std::ostream& operator<<(std::ostream& oss, const vf_fix::FIXDictionary<Logger>& dict)
 {
     return dict.dump(oss);
 }
-
-}  // namespace vf_fix
-
 
 #endif /* FIXDICTIONARY_H_ */
