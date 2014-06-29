@@ -30,15 +30,15 @@
 using namespace vf_common;
 using namespace vf_fix;
 
-#define SOH 0x01
-#define MSGSEP
-
 template<typename FIXMsgType>
 void testFIXMessage(FIXMsgType msg)
 {
-    BOOST_CHECK(msg->parseFIXMessage());
-    BOOST_CHECK(msg->parsed() && msg->complete());
+    FIXMessageDecoder<1024> decoder;
+    BOOST_CHECK(msg->parseFIXMessage(decoder));
+    BOOST_CHECK(msg->complete());
     BOOST_CHECK(msg->size() == 40);
+
+    BOOST_MESSAGE("Decoded message: " << decoder.toString());
 }
 
 template<typename FIXMsgType>

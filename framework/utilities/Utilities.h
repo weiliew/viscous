@@ -27,7 +27,7 @@ public:
     operator std::shared_ptr<T>() { return std::shared_ptr<T>(); }
 } boostNullPtr;
 
-// For anyone who is interested in knowing the background on this, (and VSignal.h)
+// For anyone who is interested in knowing the background on this, (and StaticSignal.h)
 // this is taken from examples in http://stackoverflow.com/questions/7858817/unpacking-a-tuple-to-call-a-matching-function-pointer
 // and here http://loungecpp.wikidot.com/tips-and-tricks:indices
 //

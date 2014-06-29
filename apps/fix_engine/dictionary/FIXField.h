@@ -13,6 +13,7 @@
 #ifndef FIXFIELD_H_
 #define FIXFIELD_H_
 
+#include <unordered_map>
 #include <strstream>
 #include <boost/algorithm/string.hpp>
 

@@ -18,6 +18,7 @@
 using namespace vf_common;
 
 #define SOH 0x01
+#define EQ  '='
 
 namespace vf_fix
 {
@@ -39,7 +40,6 @@ public:
 
     FIXMsg()
     : _complete   (false)
-    , _parsed     (false)
     {
         memset(&_scratchSpace, 0, sizeof(_scratchSpace));
     }
@@ -48,7 +48,6 @@ public:
     FIXMsg(const FIXMsg<BufferType>& copy)
     : _bufferStore  (copy._bufferStore)
     , _complete     (copy._complete)
-    , _parsed       (copy._parsed)
     {
         memset(&_scratchSpace, 0, sizeof(_scratchSpace));
     }
@@ -59,7 +58,6 @@ public:
         {
             _bufferStore    = copy._bufferStore;
             _complete       = copy._complete;
-            _parsed         = copy._parsed;
             memcpy(&_scratchSpace, &copy._scratchSpace, sizeof(_scratchSpace));
         }
         return *this;
@@ -71,7 +69,6 @@ public:
         {
             _bufferStore.copy(copy._bufferStore);
             _complete = copy._complete;
-            _parsed   = copy._parsed;
             memcpy(&_scratchSpace, &copy._scratchSpace, sizeof(_scratchSpace));
         }
     }
@@ -88,18 +85,15 @@ public:
     }
 
     // parse the FIX message - returns false if fix message is not valid, or if a complete fix message is not available
-    bool parseFIXMessage()
+    template<typename DecoderType>
+    bool parseFIXMessage(DecoderType& decoder)
     {
         if(UNLIKELY(!_complete))
         {
             return false;
         }
 
-        // Replace all SOH with NULLs, and locate each field offset
-        // TODO -
-
-        _parsed = true;
-        return true;
+        return decoder.parseBuffer(buffer(), size());
     }
 
     /* Attempts to identify a complete fix message in the buffer
@@ -176,7 +170,6 @@ public:
 
     void clear()
     {
-        _parsed = false;
         _complete = false;
         _bufferStore.clear();
     }
@@ -246,16 +239,10 @@ public:
         return _complete;
     }
 
-    bool parsed()
-    {
-        return _parsed;
-    }
-
 private:
     char                _scratchSpace[24];
     BufferType          _bufferStore;
     bool                _complete;
-    bool                _parsed;
 };
 
 }  // namespace osf_fix
