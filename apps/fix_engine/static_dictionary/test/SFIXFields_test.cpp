@@ -46,7 +46,7 @@ bool runTest(const std::string& input)
     BOOST_MESSAGE(ostr.str());
 
     fieldsDecoder.reset();
-    SFIXGroup_753<std::true_type, std::false_type, 5> testGroup2;
+    SFIXGroup_753<std::true_type, std::true_type, 5> testGroup2;
     if(!testGroup2.set(fieldsDecoder))
     {
         return false;
@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE( MessagePool_test_1 )
     BOOST_CHECK(runTest(std::string("753=0")+ (char) SOH));
     BOOST_CHECK(!runTest(std::string("753=1") + (char) SOH + "705=TEST" + (char) SOH + "708=0" + (char) SOH + "1055=GBP"+ (char) SOH));
     BOOST_CHECK(!runTest(std::string("753=1") + (char) SOH + "707=XXX" + (char) SOH + "708=0" + (char) SOH + "1055=GBP"+ (char) SOH));
-    BOOST_CHECK(runTest(std::string("753=1") + (char) SOH + "707=CASH" + (char) SOH + "708=0" + (char) SOH + "1055=GBP" +
+    BOOST_CHECK(runTest(std::string("753=2") + (char) SOH + "707=CASH" + (char) SOH + "708=0" + (char) SOH + "1055=GBP" +
                                                (char) SOH + "707=CASH" + (char) SOH + "708=1" + (char) SOH + "1055=USD"+ (char) SOH));
     BOOST_CHECK(runTest(std::string("753=2") + (char) SOH + "707=CASH" + (char) SOH + "708=0" +
                                                (char) SOH + "707=CASH" + (char) SOH + "708=1" + (char) SOH));

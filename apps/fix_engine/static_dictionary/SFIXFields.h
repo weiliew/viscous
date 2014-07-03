@@ -89,9 +89,9 @@ public:
             return _valIndex;
         }
 
-        if(ENUM_VAL.size() > 0)
+        if(EnumVal.size() > 0)
         {
-            _valIndex = ENUM_VAL.getIndex(_value.value());
+            _valIndex = EnumVal.getIndex(_value.value());
         }
 
         return _valIndex;
@@ -121,7 +121,10 @@ public:
 
     std::ostringstream& toString(std::ostringstream& os)
     {
-        os << (int) FID << "=" << (_value.value() ? _value.value() : "0") << "|";
+        if(isSet())
+        {
+            os << (int) FID << "=" << (_value.value() ? _value.value() : "0") << "|";
+        }
         return os;
     }
 
@@ -140,6 +143,22 @@ private:
             return false;
         }
 
+        if(getType() == FIXField::FieldType::UNKNOWN_TYPE)
+        {
+            return false;
+        }
+
+        if(IS_REQUIRED && !_value.value())
+        {
+            return false;
+        }
+
+        const char * val = decoder.currentField().second;
+        if(EnumVal.size() > 0 && val && EnumVal.getIndex(val) < 0)
+        {
+            return false;
+        }
+
         return true;
     }
 
@@ -151,148 +170,41 @@ private:
 
     constexpr static FIXField::FieldType getType()
     {
-        if(FieldTypeStr == StringConstant("INT"))
-        {
-            return FIXField::FieldType::INT;
-        }
-        else if(FieldTypeStr == StringConstant("LENGTH"))
-        {
-            return FIXField::FieldType::LENGTH;
-        }
-        else if(FieldTypeStr == StringConstant("TAGNUM"))
-        {
-            return FIXField::FieldType::TAG_NUM;
-        }
-        else if(FieldTypeStr == StringConstant("SEQNUM"))
-        {
-            return FIXField::FieldType::SEQ_NUM;
-        }
-        else if(FieldTypeStr == StringConstant("NUMINGROUP"))
-        {
-            return FIXField::FieldType::NUM_IN_GROUP;
-        }
-        else if(FieldTypeStr == StringConstant("DAYOFMONTH"))
-        {
-            return FIXField::FieldType::DAY_OF_MONTH;
-        }
-        else if(FieldTypeStr == StringConstant("FLOAT"))
-        {
-            return FIXField::FieldType::FLOAT;
-        }
-        else if(FieldTypeStr == StringConstant("QTY"))
-        {
-            return FIXField::FieldType::QTY;
-        }
-        else if(FieldTypeStr == StringConstant("PRICE"))
-        {
-            return FIXField::FieldType::PRICE_OFFSET;
-        }
-        else if(FieldTypeStr == StringConstant("AMT"))
-        {
-            return FIXField::FieldType::AMT;
-        }
-        else if(FieldTypeStr == StringConstant("PERCENTAGE"))
-        {
-            return FIXField::FieldType::PERCENTAGE;
-        }
-        else if(FieldTypeStr == StringConstant("CHAR"))
-        {
-            return FIXField::FieldType::CHAR;
-        }
-        else if(FieldTypeStr == StringConstant("BOOLEAN"))
-        {
-            return FIXField::FieldType::BOOLEAN;
-        }
-        else if(FieldTypeStr == StringConstant("STRING"))
-        {
-            return FIXField::FieldType::STRING;
-        }
-        else if(FieldTypeStr == StringConstant("MULTIPLECHARVALUE"))
-        {
-            return FIXField::FieldType::MULTIPLE_CHAR_VALUE;
-        }
-        else if(FieldTypeStr == StringConstant("MULTIPLESTRINGVALUE"))
-        {
-            return FIXField::FieldType::MULTIPLE_STRING_VALUE;
-        }
-        else if(FieldTypeStr == StringConstant("COUNTRY"))
-        {
-            return FIXField::FieldType::COUNTRY;
-        }
-        else if(FieldTypeStr == StringConstant("CURRENCY"))
-        {
-            return FIXField::FieldType::CURRENCY;
-        }
-        else if(FieldTypeStr == StringConstant("EXCHANGE"))
-        {
-            return FIXField::FieldType::EXCHANGE;
-        }
-        else if(FieldTypeStr == StringConstant("MONTHYEAR"))
-        {
-            return FIXField::FieldType::MONTH_YEAR;
-        }
-        else if(FieldTypeStr == StringConstant("UTCTIMESTAMP"))
-        {
-            return FIXField::FieldType::UTC_TIMESTAMP;
-        }
-        else if(FieldTypeStr == StringConstant("UTCTIMEONLY"))
-        {
-            return FIXField::FieldType::UTC_TIME_ONLY;
-        }
-        else if(FieldTypeStr == StringConstant("UTCDATEONLY"))
-        {
-            return FIXField::FieldType::UTC_DATE_ONLY;
-        }
-        else if(FieldTypeStr == StringConstant("LOCALMKTDATE"))
-        {
-            return FIXField::FieldType::LOCAL_MKT_DATE;
-        }
-        else if(FieldTypeStr == StringConstant("TZTIMEONLY"))
-        {
-            return FIXField::FieldType::TZ_TIME_ONLY;
-        }
-        else if(FieldTypeStr == StringConstant("TZTIMESTAMP"))
-        {
-            return FIXField::FieldType::TZ_TIMESTAMP;
-        }
-        else if(FieldTypeStr == StringConstant("DATA"))
-        {
-            return FIXField::FieldType::DATA;
-        }
-        else if(FieldTypeStr == StringConstant("XMLDATA"))
-        {
-            return FIXField::FieldType::XML_DATA;
-        }
-        else if(FieldTypeStr == StringConstant("LANGUAGE"))
-        {
-            return FIXField::FieldType::LANGUAGE;
-        }
-        else if(FieldTypeStr == StringConstant("PATTERN"))
-        {
-            return FIXField::FieldType::PATTERN;
-        }
-        else if(FieldTypeStr == StringConstant("TENOR"))
-        {
-            return FIXField::FieldType::TENOR;
-        }
-        else if(FieldTypeStr == StringConstant("RESERVED100PLUS"))
-        {
-            return FIXField::FieldType::RESERVED_100_PLUS;
-        }
-        else if(FieldTypeStr == StringConstant("RESERVED1000PLUS"))
-        {
-            return FIXField::FieldType::RESERVED_1000_PLUS;
-        }
-        else if(FieldTypeStr == StringConstant("RESERVED4000PLUS"))
-        {
-            return FIXField::FieldType::RESERVED_4000_PLUS;
-        }
-        else if(FieldTypeStr == StringConstant("COMPONENT"))
-        {
-            return FIXField::FieldType::COMPONENT_TYPE;
-        }
-
-        return FIXField::FieldType::UNKNOWN_TYPE;
+        return FieldTypeStr == StringConstant("INT") ? FIXField::FieldType::INT :
+               FieldTypeStr == StringConstant("LENGTH") ? FIXField::FieldType::LENGTH :
+               FieldTypeStr == StringConstant("TAGNUM") ? FIXField::FieldType::TAG_NUM :
+               FieldTypeStr == StringConstant("NUMINGROUP") ? FIXField::FieldType::NUM_IN_GROUP :
+               FieldTypeStr == StringConstant("DAYOFMONTH") ? FIXField::FieldType::DAY_OF_MONTH :
+               FieldTypeStr == StringConstant("FLOAT") ? FIXField::FieldType::FLOAT :
+               FieldTypeStr == StringConstant("QTY") ? FIXField::FieldType::QTY :
+               FieldTypeStr == StringConstant("PRICE") ? FIXField::FieldType::PRICE_OFFSET :
+               FieldTypeStr == StringConstant("AMT") ? FIXField::FieldType::AMT :
+               FieldTypeStr == StringConstant("PERCENTAGE") ? FIXField::FieldType::PERCENTAGE :
+               FieldTypeStr == StringConstant("CHAR") ? FIXField::FieldType::CHAR :
+               FieldTypeStr == StringConstant("BOOLEAN") ? FIXField::FieldType::BOOLEAN :
+               FieldTypeStr == StringConstant("STRING") ? FIXField::FieldType::STRING :
+               FieldTypeStr == StringConstant("MULTIPLECHARVALUE") ? FIXField::FieldType::MULTIPLE_CHAR_VALUE :
+               FieldTypeStr == StringConstant("MULTIPLESTRINGVALUE") ? FIXField::FieldType::MULTIPLE_STRING_VALUE :
+               FieldTypeStr == StringConstant("COUNTRY") ? FIXField::FieldType::COUNTRY :
+               FieldTypeStr == StringConstant("CURRENCY") ? FIXField::FieldType::CURRENCY :
+               FieldTypeStr == StringConstant("EXCHANGE") ? FIXField::FieldType::EXCHANGE :
+               FieldTypeStr == StringConstant("MONTHYEAR") ? FIXField::FieldType::MONTH_YEAR :
+               FieldTypeStr == StringConstant("UTCTIMESTAMP") ? FIXField::FieldType::UTC_TIMESTAMP :
+               FieldTypeStr == StringConstant("UTCTIMEONLY") ? FIXField::FieldType::UTC_TIME_ONLY :
+               FieldTypeStr == StringConstant("UTCDATEONLY") ? FIXField::FieldType::UTC_DATE_ONLY :
+               FieldTypeStr == StringConstant("LOCALMKTDATE") ? FIXField::FieldType::LOCAL_MKT_DATE :
+               FieldTypeStr == StringConstant("TZTIMEONLY") ? FIXField::FieldType::TZ_TIME_ONLY :
+               FieldTypeStr == StringConstant("TZTIMESTAMP") ? FIXField::FieldType::TZ_TIMESTAMP :
+               FieldTypeStr == StringConstant("DATA") ? FIXField::FieldType::DATA :
+               FieldTypeStr == StringConstant("XMLDATA") ? FIXField::FieldType::XML_DATA :
+               FieldTypeStr == StringConstant("LANGUAGE") ? FIXField::FieldType::LANGUAGE :
+               FieldTypeStr == StringConstant("PATTERN") ? FIXField::FieldType::PATTERN :
+               FieldTypeStr == StringConstant("TENOR") ? FIXField::FieldType::TENOR :
+               FieldTypeStr == StringConstant("RESERVED100PLUS") ? FIXField::FieldType::RESERVED_100_PLUS :
+               FieldTypeStr == StringConstant("RESERVED1000PLUS") ? FIXField::FieldType::RESERVED_1000_PLUS :
+               FieldTypeStr == StringConstant("RESERVED4000PLUS") ? FIXField::FieldType::RESERVED_4000_PLUS :
+               FieldTypeStr == StringConstant("COMPONENT") ? FIXField::FieldType::COMPONENT_TYPE :
+               FIXField::FieldType::UNKNOWN_TYPE;
     }
 
     int             _valIndex;

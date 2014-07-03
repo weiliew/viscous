@@ -168,7 +168,7 @@ private:
     }
 
     template<typename DecoderType, typename FieldType, typename... FieldTypeList>
-    bool setSubField(DecoderType& decoder, int fid, FieldType& field, FieldTypeList... fieldList)
+    bool setSubField(DecoderType& decoder, int fid, FieldType& field, FieldTypeList&... fieldList)
     {
         if(fid == field.FID)
         {
@@ -202,7 +202,7 @@ private:
     }
 
     template<typename FieldType, typename... FieldTypeList>
-    constexpr bool isSubField(int fid, FieldType& field, FieldTypeList... fieldList)
+    constexpr bool isSubField(int fid, FieldType& field, FieldTypeList&... fieldList)
     {
         if(fid == field.FID)
         {
@@ -226,11 +226,12 @@ private:
     }
 
     template<typename FieldType, typename... FieldTypeList>
-    bool getSubField(int fid, CachedField& retField, FieldType& field, FieldTypeList... fieldList)
+    bool getSubField(int fid, CachedField& retField, FieldType& field, FieldTypeList&... fieldList)
     {
         if(fid == field.FID)
         {
             // found
+            std::cout << "getSubField: " << &field << " FID: " << (int) fid << std::endl;
             retField = field.get();
             return true;
         }
@@ -244,6 +245,7 @@ private:
         if(fid == field.FID)
         {
             // found
+            std::cout << "getSubField: " << &field << " FID: " << (int) fid << std::endl;
             retField = field.get();
             return true;
         }
@@ -266,7 +268,7 @@ private:
     }
 
     template<typename FieldType, typename... FieldTypeList>
-    std::ostringstream& toString(std::ostringstream& os, FieldType& field, FieldTypeList... fieldList)
+    std::ostringstream& toString(std::ostringstream& os, FieldType& field, FieldTypeList&... fieldList)
     {
         field.toString(os);
         return toString(os, fieldList...);
@@ -280,6 +282,7 @@ private:
 
     int                         _numRepeating;
     std::tuple<FieldTypes...>   _fieldList[Capacity];
+
 };
 
 template<int Fid, const StringConstant& Name, typename Required, typename Validate, unsigned int Capacity, typename... FieldTypes>

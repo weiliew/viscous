@@ -30,6 +30,9 @@ StringConstant NoPosAmt("NoPosAmt");
 StringConstant STRING("STRING");
 StringConstant AMT("AMT");
 
+
+
+
 StringConstant ArrEnum_707[] = {StringConstant("CASH"), StringConstant("CRES"), StringConstant("FMTM"),
                                 StringConstant("IMTM"), StringConstant("PREM"), StringConstant("SMTM"),
                                 StringConstant("TVAR"), StringConstant("VADJ"), StringConstant("SETL")};
@@ -45,6 +48,7 @@ StringConstant ArrDesc_707[] = {StringConstant("CASH_AMOUNT"), StringConstant("C
 StringConstantArr StrArrDesc_707(ArrDesc_707);
 
 StringConstantArr EmptyArray;
+
 
 template<typename Required, typename Validate>
 using SFIXField_707 = SFIXField<707,
