@@ -7,5 +7,5 @@ License information contained in LICENSE file or at http://www.boost.org/LICENSE
 
 Project Status:
 . 11th Jan 2014 Start of project. Aim is to identify common components and port from the osfix project to be used as baseline
-. 27th March New repository created to migrate from mainly fixed based common code into a more generic common code with project viscous.
-
+. 27th March 	New repository created to migrate from mainly fixed based common code into a more generic common code with project viscous.
+. 3rd July		Complated initial draft of static FIX data dictionary and field types. New auto-generated field definitions to be added.
