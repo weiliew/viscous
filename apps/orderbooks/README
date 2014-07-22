@@ -1,0 +1,30 @@
+The source code is contained in 2 files:
+Book.h contains a generic book handling code 
+pricer.cpp contains specific functions to parse the input message format as well as calculate the price according to the requirement
+
+To build, the latest gcc will be required (4.8.0). This is to allow support for C++11 asa well as the emplace function call for std::multiset that was not available in earlier gcc version.
+
+Build command I used:
+g++ -lrt -std=c++11 -O3 -Wall pricer.cpp -o pricer
+
+Sample output times and cross check of test results:
+
+wei@ubuntu-vm:/userspace/orderbook$ time cat /home/wei/Downloads/pricer.in | ./pricer 1 > 1.out
+
+real    0m2.159s
+user    0m1.860s
+sys     0m0.230s
+wei@ubuntu-vm:/userspace/orderbook$ time cat /home/wei/Downloads/pricer.in | ./pricer 200 > 200.out
+
+real    0m2.641s
+user    0m2.250s
+sys     0m0.360s
+wei@ubuntu-vm:/userspace/orderbook$ time cat /home/wei/Downloads/pricer.in | ./pricer 10000 > 10000.out
+
+real    0m7.075s
+user    0m4.910s
+sys     0m2.080s
+wei@ubuntu-vm:/userspace/orderbook$ diff 1.out /home/wei/Downloads/pricer.out.1
+wei@ubuntu-vm:/userspace/orderbook$ diff 200.out /home/wei/Downloads/pricer.out.200
+wei@ubuntu-vm:/userspace/orderbook$ diff 10000.out /home/wei/Downloads/pricer.out.10000
+wei@ubuntu-vm:/userspace/orderbook$
