@@ -105,7 +105,7 @@ public:
     int getCompleteMsg()
     {
         char * buffer = _bufferStore.buffer();
-        size_t len = _bufferStore.size();
+        int len = _bufferStore.size();
 
         // parse and set the fix message - first check if we got the full message
         // always start with 8=FIX...^9=Len

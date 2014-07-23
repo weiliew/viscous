@@ -1,7 +1,7 @@
 /*
- * SFIXMessages.h
+ * SFIXCollections.h
  *
- *  Created on: 29 May 2014
+ *  Created on: 22 Jul 2014
  *      Author: Wei Liew (wei@onesixeightsolutions.com)
  *
  *  Copyright Wei Liew 2012 - 2014.
@@ -10,52 +10,51 @@
  *
  */
 
-#ifndef SFIXMESSAGES_H_
-#define SFIXMESSAGES_H_
+#ifndef SFIXCOLLECTIONS_H_
+#define SFIXCOLLECTIONS_H_
+
+
+#include "SFIXFields.h"
 
 namespace vf_fix
 {
 
-template<const StringConstant&  Name,
-         const StringConstant&  Type,
-         typename               Validate,
-         typename...            FieldTypes>
-class SFIXMessage
+// this class is used for storing header and trailer of a message - it is similar to a group but is non repeating
+
+template<typename      Validate,
+         typename...   FieldTypes>
+class SFIXCollection
 {
 public:
-    constexpr static StringConstant        NAME        = Name;
-    constexpr static StringConstant        TYPE        = Type;
+    SFIXCollection()
+    {}
+
+    constexpr static StringConstant        NAME        = StringConstant("header");
+    constexpr static bool                  IS_GROUP    = false;
+    constexpr static bool                  IS_REQUIRED = true;
     constexpr static bool                  VALIDATE    = Validate::value;
-
-    SFIXMessage()
-    {
-    }
-
-    ~SFIXMessage()
-    {
-    }
 
     template<typename DecoderType>
     bool set(DecoderType& decoder)
     {
-        if(UNLIKELY(!decoder.currentField().first || !decoder.currentField().second))
+        while(setSubField(decoder))
         {
-            return false;
+            if(!decoder.next())
+            {
+                break;
+            }
         }
 
-        do
+        // rewind the last decoded field
+        if(decoder.isValid())
         {
-            // TODO - validate fields ?
-            if(!setSubField(decoder))
-            {
-                // error
-                return false;
-            }
-        } while(decoder.next());
+            decoder.rewind();
+        }
+
+        // TODO - validate ?
 
         return true;
     }
-
 
     template<typename DecoderType>
     bool setSubField(DecoderType& decoder)
@@ -68,11 +67,6 @@ public:
         return isSubFieldUnwind(fid, typename gens<sizeof...(FieldTypes)>::type());
     }
 
-    std::ostringstream& toString(std::ostringstream& os)
-    {
-        return toStringUnwind(os, typename gens<sizeof...(FieldTypes)>::type());
-    }
-
     bool getSubField(int fid, CachedField& retField)
     {
         return getSubFieldUnwind(fid, retField, typename gens<sizeof...(FieldTypes)>::type());
@@ -82,6 +76,11 @@ public:
     bool getSubGroup(int fid, GroupType& retField)
     {
         return getSubGroupUnwind(fid, retField, typename gens<sizeof...(FieldTypes)>::type());
+    }
+
+    std::ostringstream& toString(std::ostringstream& os)
+    {
+        return toStringUnwind(os, typename gens<sizeof...(FieldTypes)>::type());
     }
 
 private:
@@ -144,27 +143,6 @@ private:
         return (fid == field.FID);
     }
 
-    // toString
-    template<int ...S>
-    std::ostringstream& toStringUnwind(std::ostringstream& os, seq<S...>)
-    {
-        toString(os, std::get<S>(_fieldList) ...);
-        return os;
-    }
-
-    template<typename FieldType, typename... FieldTypeList>
-    std::ostringstream& toString(std::ostringstream& os, FieldType& field, FieldTypeList&... fieldList)
-    {
-        field.toString(os);
-        return toString(os, fieldList...);
-    }
-
-    template<typename FieldType>
-    std::ostringstream& toString(std::ostringstream& os, FieldType& field)
-    {
-        return field.toString(os);
-    }
-
     // getSubField
     template<int ...S>
     bool getSubFieldUnwind(int fid, CachedField& retField, seq<S...>)
@@ -173,8 +151,7 @@ private:
     }
 
     template<typename FieldType, typename... FieldTypeList>
-    typename std::enable_if<!FieldType::IS_GROUP, bool>::type
-    getSubField(int fid, CachedField& retField, FieldType& field, FieldTypeList&... fieldList)
+    bool getSubField(int fid, CachedField& retField, FieldType& field, FieldTypeList&... fieldList)
     {
         if(fid == field.FID)
         {
@@ -188,8 +165,7 @@ private:
     }
 
     template<typename FieldType>
-    typename std::enable_if<!FieldType::IS_GROUP, bool>::type
-    getSubField(int fid, CachedField& retField, FieldType& field)
+    bool getSubField(int fid, CachedField& retField, FieldType& field)
     {
         if(fid == field.FID)
         {
@@ -203,20 +179,6 @@ private:
             // not found
             return false;
         }
-    }
-
-    template<typename FieldType, typename... FieldTypeList>
-    typename std::enable_if<FieldType::IS_GROUP, bool>::type
-    getSubField(int fid, CachedField& retField, FieldType& field, FieldTypeList&... fieldList)
-    {
-        return getSubField(fid, retField, fieldList...);
-    }
-
-    template<typename FieldType>
-    typename std::enable_if<FieldType::IS_GROUP, bool>::type
-    getSubField(int fid, CachedField& retField, FieldType& field)
-    {
-        return false;
     }
 
     // getSubGroup
@@ -273,20 +235,45 @@ private:
         return false;
     }
 
+    // toString
+    template<int ...S>
+    std::ostringstream& toStringUnwind(std::ostringstream& os, seq<S...>)
+    {
+        toString(os, std::get<S>(_fieldList) ...);
+        return os;
+    }
+
+    template<typename FieldType, typename... FieldTypeList>
+    std::ostringstream& toString(std::ostringstream& os, FieldType& field, FieldTypeList&... fieldList)
+    {
+        field.toString(os);
+        return toString(os, fieldList...);
+    }
+
+    template<typename FieldType>
+    std::ostringstream& toString(std::ostringstream& os, FieldType& field)
+    {
+        return field.toString(os);
+    }
+
     std::tuple<FieldTypes...>   _fieldList;
+
 };
 
-template<const StringConstant& Name, const StringConstant& Type, typename Validate, typename... FieldTypes>
-constexpr StringConstant SFIXMessage<Name, Type, Validate, FieldTypes...>::NAME;
+template<typename Validate, typename... FieldTypes>
+constexpr StringConstant SFIXCollection<Validate, FieldTypes...>::NAME;
 
-template<const StringConstant& Name, const StringConstant& Type, typename Validate, typename... FieldTypes>
-constexpr StringConstant SFIXMessage<Name, Type, Validate, FieldTypes...>::TYPE;
+template<typename Validate, typename... FieldTypes>
+constexpr bool SFIXCollection<Validate, FieldTypes...>::IS_GROUP;
 
-template<const StringConstant& Name, const StringConstant& Type, typename Validate, typename... FieldTypes>
-constexpr bool SFIXMessage<Name, Type, Validate, FieldTypes...>::VALIDATE;
+template<typename Validate, typename... FieldTypes>
+constexpr bool SFIXCollection<Validate, FieldTypes...>::IS_REQUIRED;
 
-}  // namespace vf_fix
+template<typename Validate, typename... FieldTypes>
+constexpr bool SFIXCollection<Validate, FieldTypes...>::VALIDATE;
+
+} // namespace vf_fix
 
 
 
-#endif /* SFIXMESSAGES_H_ */
+#endif /* SFIXCOLLECTIONS_H_ */

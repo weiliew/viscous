@@ -27,7 +27,7 @@ template<size_t HolderCapacity>
 class FIXMessageDecoder
 {
 public:
-    typedef std::pair<const char *, const char *>       FieldPairType;
+    typedef std::pair<int, const char *>                FieldPairType;
     typedef std::array<FieldPairType, HolderCapacity>   FieldArrType;
     typedef typename FieldArrType::iterator             Iterator;
 
@@ -36,7 +36,7 @@ public:
     , _currPos(0)
     , _parsed(false)
     {
-        _fieldArrays.fill(std::make_pair((const char *) NULL, (const char *) NULL));
+        _fieldArrays.fill(std::make_pair(0, (const char *) NULL));
     }
 
     virtual ~FIXMessageDecoder(){}
@@ -52,7 +52,7 @@ public:
         size_t consumed = 0;
         while(consumed < len)
         {
-            _fieldArrays[_numFields].first = idx;
+            _fieldArrays[_numFields].first = atoi(idx);  // TODO - make more efficient
             idx = (char *) memchr(idx, EQ, len - consumed);
             if(UNLIKELY(idx == NULL))
             {
@@ -124,6 +124,11 @@ public:
         }
 
         return oss.str();
+    }
+
+    bool isValid()
+    {
+        return _currPos < _numFields;
     }
 
 private:

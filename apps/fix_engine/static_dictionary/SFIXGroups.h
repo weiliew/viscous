@@ -17,6 +17,7 @@
 
 namespace vf_fix
 {
+
 template<int                    Fid,
          const StringConstant&  Name,
          typename               Required,
@@ -52,8 +53,7 @@ public:
             return false;
         }
 
-        int fid = atoi(decoder.currentField().first);
-        if(fid != FID)
+        if(decoder.currentField().first != FID)
         {
             return false;
         }
@@ -81,7 +81,7 @@ public:
             // TODO - validate fields ?
 
             auto& subField = decoder.currentField();
-            int fid = atoi(subField.first);
+            int fid = subField.first;
 
             if(_numRepeating == 1 && !isSubField(fid))
             {
@@ -151,6 +151,12 @@ public:
         }
 
         return getSubFieldUnwind(fid, index, retField, typename gens<sizeof...(FieldTypes)>::type());
+    }
+
+    template<typename GroupType>
+    bool getSubGroup(int fid, int index, GroupType& retField)
+    {
+        return getSubGroupUnwind(fid, index, retField, typename gens<sizeof...(FieldTypes)>::type());
     }
 
     std::ostringstream& toString(std::ostringstream& os)
@@ -254,6 +260,60 @@ private:
             // not found
             return false;
         }
+    }
+
+    // getSubGroup
+    template<typename GroupType, int ...S>
+    bool getSubGroupUnwind(int fid, int index, GroupType& retField, seq<S...>)
+    {
+        return getSubGroup<GroupType, S...>(fid, retField, std::get<S>(_fieldList[index]) ...);
+    }
+
+    template<typename GroupType, typename FieldType, typename... FieldTypeList>
+    typename std::enable_if<FieldType::IS_GROUP, bool>::type
+    getSubGroup(int fid, GroupType& retField, FieldType& field, FieldTypeList&... fieldList)
+    {
+        if(fid == field.FID)
+        {
+            // found
+            std::cout << "getSubGroup: " << &field << " FID: " << (int) fid << std::endl;
+            retField = field.get();
+            return true;
+        }
+
+        return getSubGroup<GroupType, FieldTypeList...>(fid, retField, fieldList...);
+    }
+
+    template<typename GroupType, typename FieldType>
+    typename std::enable_if<FieldType::IS_GROUP, bool>::type
+    getSubGroup(int fid, GroupType& retField, FieldType& field)
+    {
+        if(fid == field.FID)
+        {
+            // found
+            std::cout << "getSubGroup: " << &field << " FID: " << (int) fid << std::endl;
+            retField = field.get();
+            return true;
+        }
+        else
+        {
+            // not found
+            return false;
+        }
+    }
+
+    template<typename GroupType, typename FieldType, typename... FieldTypeList>
+    typename std::enable_if<!FieldType::IS_GROUP, bool>::type
+    getSubGroup(int fid, GroupType& retField, FieldType& field, FieldTypeList&... fieldList)
+    {
+        return getSubGroup<GroupType, FieldTypeList...>(fid, retField, fieldList...);
+    }
+
+    template<typename GroupType, typename FieldType>
+    typename std::enable_if<!FieldType::IS_GROUP, bool>::type
+    getSubGroup(int fid, GroupType& retField, FieldType& field)
+    {
+        return false;
     }
 
     // toString

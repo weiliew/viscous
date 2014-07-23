@@ -57,7 +57,7 @@ public:
         ++_count;
     }
 
-    int _count;
+    size_t _count;
 };
 
 

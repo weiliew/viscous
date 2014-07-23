@@ -58,7 +58,7 @@ struct TestMessage
 
     }
 
-    int getCompleteMsg()
+    size_t getCompleteMsg()
     {
         // assume complete message is a 10 byte chunk
         if(_buffer.size() >= 10)

@@ -63,7 +63,7 @@ public:
             _msgCache = msg;
         }
 
-        int processed = _msgCache->getCompleteMsg();
+        size_t processed = _msgCache->getCompleteMsg();
         while(processed > 0)
         {
             if(_msgCache->size() > processed)
@@ -105,7 +105,7 @@ public:
             _msgCache = msg;
         }
 
-        int processed = _msgCache->getCompleteMsg();
+        size_t processed = _msgCache->getCompleteMsg();
         while(processed > 0)
         {
             if(_msgCache->size() > processed)

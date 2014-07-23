@@ -22,7 +22,7 @@
 #include <boost/test/included/unit_test.hpp>
 
 #include "apps/fix_engine/message/FIXMessageDecoder.h"
-#include "apps/fix_engine/static_dictionary/FieldDefs.h"
+#include "apps/fix_engine/static_dictionary/gen/FieldDefsGen44.h"
 
 using namespace vf_common;
 using namespace vf_fix;
@@ -35,7 +35,7 @@ bool runTest(const std::string& input)
         return false;
     }
 
-    SFIXGroup_753<std::true_type, std::false_type, 5> testGroup1;
+    fix_defs::messages::TradeCaptureReport::SFIXGroup_NoPosAmt<std::true_type, std::false_type, 5> testGroup1;
     if(!testGroup1.set(fieldsDecoder))
     {
         return false;
@@ -46,7 +46,7 @@ bool runTest(const std::string& input)
     BOOST_MESSAGE(ostr.str());
 
     fieldsDecoder.reset();
-    SFIXGroup_753<std::true_type, std::true_type, 5> testGroup2;
+    fix_defs::messages::TradeCaptureReport::SFIXGroup_NoPosAmt<std::true_type, std::true_type, 5> testGroup2;
     if(!testGroup2.set(fieldsDecoder))
     {
         return false;
@@ -77,6 +77,26 @@ BOOST_AUTO_TEST_CASE( MessagePool_test_1 )
                                                (char) SOH + "705=OTHER"+ (char) SOH));
     BOOST_CHECK(!runTest(std::string("753=3") + (char) SOH + "707=CASH" + (char) SOH + "708=0" + (char) SOH + "1055=GBP" +
                                                (char) SOH + "707=CASH" + (char) SOH + "708=1" + (char) SOH + "1055=USD"+ (char) SOH));
+
+    /*
+    std::string msgTestStr(std::string("753=1") + (char) SOH + "707=CASH" + (char) SOH + "708=0" + (char) SOH + "1055=GBP"+ (char) SOH + "999=TEST_FIELD"+ (char) SOH);
+    FIXMessageDecoder<100> fieldsDecoder;
+    BOOST_CHECK(fieldsDecoder.parseBuffer((char *) msgTestStr.c_str(), msgTestStr.length()));
+    SFIXMessage_Test999<std::false_type> msg1;
+    BOOST_CHECK(msg1.set(fieldsDecoder));
+
+    std::ostringstream ostr;
+    msg1.toString(ostr);
+    BOOST_MESSAGE(ostr.str());
+
+    fieldsDecoder.reset();
+    SFIXMessage_Test999<std::true_type> msg2;
+    BOOST_CHECK(msg2.set(fieldsDecoder));
+
+    std::ostringstream ostr2;
+    msg2.toString(ostr2);
+    BOOST_MESSAGE(ostr2.str());
+    */
 }
 
 

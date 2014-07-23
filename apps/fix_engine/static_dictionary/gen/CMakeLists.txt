@@ -5,7 +5,4 @@
  #  Distributed under the Boost Software License, Version 1.0.
  #  (See http://www.boost.org/LICENSE_1_0.txt)
 
-# generate static data dict here ??
-
-add_subdirectory(gen) 
-add_subdirectory(test)
+ # generate static data dict here ??
