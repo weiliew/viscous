@@ -61,25 +61,25 @@ bool runTest(const std::string& input)
 
 BOOST_AUTO_TEST_CASE( MessagePool_test_1 )
 {
-    BOOST_CHECK(runTest(std::string("136=1") + (char) SOH + "137=10.00" + (char) SOH + "138=X" + (char) SOH + "139=OTHER"+ (char) SOH));
-    BOOST_CHECK(runTest(std::string("136=1") + (char) SOH + "138=X" + (char) SOH + "139=OTHER"+ (char) SOH));
-    BOOST_CHECK(runTest(std::string("136=1") + (char) SOH + "139=OTHER"+ (char) SOH));
+    BOOST_CHECK(runTest(std::string("136=1") + (char) SOH + "137=10.00" + (char) SOH + "138=X" + (char) SOH + "139=1"+ (char) SOH));
+    BOOST_CHECK(runTest(std::string("136=1") + (char) SOH + "138=X" + (char) SOH + "139=1"+ (char) SOH));
+    BOOST_CHECK(runTest(std::string("136=1") + (char) SOH + "139=1"+ (char) SOH));
     BOOST_CHECK(runTest(std::string("136=0")+ (char) SOH));
-    BOOST_CHECK(!runTest(std::string("136=1") + (char) SOH + "705=TEST" + (char) SOH + "138=X" + (char) SOH + "139=OTHER"+ (char) SOH));
-    BOOST_CHECK(!runTest(std::string("136=1") + (char) SOH + "707=XXX" + (char) SOH + "138=X" + (char) SOH + "139=OTHER"+ (char) SOH));
-    BOOST_CHECK(runTest(std::string("136=2") + (char) SOH + "137=10.00" + (char) SOH + "138=X" + (char) SOH + "139=OTHER" +
-                                               (char) SOH + "137=10.00" + (char) SOH + "138=Y" + (char) SOH + "139=TAX"+ (char) SOH));
+    BOOST_CHECK(!runTest(std::string("136=1") + (char) SOH + "705=TEST" + (char) SOH + "138=X" + (char) SOH + "139=1"+ (char) SOH));
+    BOOST_CHECK(!runTest(std::string("136=1") + (char) SOH + "707=XXX" + (char) SOH + "138=X" + (char) SOH + "139=1"+ (char) SOH));
+    BOOST_CHECK(runTest(std::string("136=2") + (char) SOH + "137=10.00" + (char) SOH + "138=X" + (char) SOH + "139=1" +
+                                               (char) SOH + "137=10.00" + (char) SOH + "138=Y" + (char) SOH + "139=2"+ (char) SOH));
     BOOST_CHECK(runTest(std::string("136=2") + (char) SOH + "137=10.00" + (char) SOH + "138=X" +
                                                (char) SOH + "137=10.00" + (char) SOH + "138=Y" + (char) SOH));
-    BOOST_CHECK(runTest(std::string("136=2") + (char) SOH + "138=X" + (char) SOH + "139=OTHER" +
-                                               (char) SOH + "138=Y" + (char) SOH + "139=TAX"+ (char) SOH));
-    BOOST_CHECK(!runTest(std::string("136=2") + (char) SOH + "137=10.00" + (char) SOH + "138=X" + (char) SOH + "139=OTHER" +
+    BOOST_CHECK(runTest(std::string("136=2") + (char) SOH + "138=X" + (char) SOH + "139=1" +
+                                               (char) SOH + "138=Y" + (char) SOH + "139=2"+ (char) SOH));
+    BOOST_CHECK(!runTest(std::string("136=2") + (char) SOH + "137=10.00" + (char) SOH + "138=X" + (char) SOH + "139=1" +
                                                (char) SOH + "705=OTHER"+ (char) SOH));
-    BOOST_CHECK(!runTest(std::string("136=3") + (char) SOH + "137=10.00" + (char) SOH + "138=X" + (char) SOH + "139=OTHER" +
-                                               (char) SOH + "137=10.00" + (char) SOH + "138=A" + (char) SOH + "139=TAX"+ (char) SOH));
+    BOOST_CHECK(!runTest(std::string("136=3") + (char) SOH + "137=10.00" + (char) SOH + "138=X" + (char) SOH + "139=1" +
+                                               (char) SOH + "137=10.00" + (char) SOH + "138=A" + (char) SOH + "139=2"+ (char) SOH));
 
     /*
-    std::string msgTestStr(std::string("753=1") + (char) SOH + "137=10.00" + (char) SOH + "138=X" + (char) SOH + "139=OTHER"+ (char) SOH + "999=TEST_FIELD"+ (char) SOH);
+    std::string msgTestStr(std::string("753=1") + (char) SOH + "137=10.00" + (char) SOH + "138=X" + (char) SOH + "139=1"+ (char) SOH + "999=TEST_FIELD"+ (char) SOH);
     FIXMessageDecoder<100> fieldsDecoder;
     BOOST_CHECK(fieldsDecoder.parseBuffer((char *) msgTestStr.c_str(), msgTestStr.length()));
     SFIXMessage_Test999<std::false_type> msg1;
