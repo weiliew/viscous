@@ -1,6 +1,9 @@
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 <xsl:output method="text" indent="no"/>
 
+<xsl:param name="transport_file" select="'default'"/>
+<xsl:variable name="tport_filename"><xsl:value-of select='$transport_file'/></xsl:variable>
+
 <xsl:template match="fix">
 <xsl:text disable-output-escaping="yes">
 /*
@@ -35,8 +38,17 @@ namespace fix_defs
 {
 </xsl:text>
 <xsl:apply-templates select="fields"/>
-<xsl:apply-templates select="header"/>
-<xsl:apply-templates select="trailer"/>
+<xsl:choose>
+<xsl:when test="$transport_file != 'default'">
+    <xsl:apply-templates select="document($transport_file)/fix/header"/>
+    <xsl:apply-templates select="document($transport_file)/fix/trailer"/>
+    <xsl:apply-templates select="document($transport_file)/fix/messages"/>
+</xsl:when>
+<xsl:otherwise>
+    <xsl:apply-templates select="header"/>
+    <xsl:apply-templates select="trailer"/>
+</xsl:otherwise>
+</xsl:choose>
 <xsl:apply-templates select="messages"/>
 <xsl:text disable-output-escaping="yes">
 } // fix_defs
@@ -269,8 +281,6 @@ namespace trailer
 </xsl:text>
 </xsl:template>
 
-<!--TODO - write script to automate -->
-<!--TODO - FIX version 5.0 SP1&2 and FIXT-->
 <!--TODO - validate groups and hdrs and trailers -->
 
 </xsl:stylesheet> 

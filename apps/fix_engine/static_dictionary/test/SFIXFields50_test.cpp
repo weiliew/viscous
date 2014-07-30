@@ -22,7 +22,7 @@
 #include <boost/test/included/unit_test.hpp>
 
 #include "apps/fix_engine/message/FIXMessageDecoder.h"
-#include "apps/fix_engine/static_dictionary/gen/FieldDefsGen44.h"
+#include "apps/fix_engine/static_dictionary/gen/FieldDefsGen50.h"
 
 using namespace vf_common;
 using namespace vf_fix;
