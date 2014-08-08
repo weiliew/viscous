@@ -1,0 +1,1 @@
+This directory is for boost thirdparty builds. Please build and install boost relative to this directory as specified in the CMakeList.txt file in thirdparty directory. For example, boost_1_53_0/install.

@@ -27,7 +27,7 @@ what apps ?
 6. Co-routine implementatiion and re-factor architecture/ streamline architecture to remove unused options etc
 
 TODO next -
-FIX IO - initiator and acceptor
+* FIX IO - initiator and acceptor
 Add tests for FIX messages
 FIX message creaation ?
 FIX message performance figures ?

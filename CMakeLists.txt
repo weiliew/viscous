@@ -16,7 +16,7 @@ set (VERSION_MINOR 1)
 set (VERSION_CLASS Beta)
 
 INCLUDE (${PROJECT_SOURCE_DIR}/CMakeMacros.txt)
-INCLUDE (${PROJECT_SOURCE_DIR}/../thirdparty/CMakeLists.txt)
+INCLUDE (${PROJECT_SOURCE_DIR}/thirdparty/CMakeLists.txt)
 
 # Get GIT version
 
