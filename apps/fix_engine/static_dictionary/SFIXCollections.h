@@ -29,6 +29,7 @@ public:
     SFIXCollection()
     {}
 
+    constexpr static int                   FID         = 0;
     constexpr static StringConstant        NAME        = StringConstant("header");
     constexpr static bool                  IS_GROUP    = false;
     constexpr static bool                  IS_REQUIRED = true;
@@ -37,6 +38,8 @@ public:
     template<typename DecoderType>
     bool set(DecoderType& decoder)
     {
+        // TODO - do we need to check if the fields are in sequence when validate is set to true ?
+
         while(setSubField(decoder))
         {
             if(!decoder.next())
@@ -51,7 +54,11 @@ public:
             decoder.rewind();
         }
 
-        // TODO - validate ?
+        // optional validation check
+        if(!validate<VALIDATE>(decoder))
+        {
+            return false;
+        }
 
         return true;
     }
@@ -84,6 +91,83 @@ public:
     }
 
 private:
+    template<bool T, typename DecoderType>
+    typename std::enable_if<T, bool>::type validate(DecoderType& decoder)
+    {
+        // make sure all required fields are set and is in sequence
+        return checkMessageSeq(decoder);
+    }
+
+    template<bool T, typename DecoderType>
+    typename std::enable_if<!T, bool>::type validate(DecoderType& decoder)
+    {
+        return true;
+    }
+
+    template<typename DecoderType>
+    bool checkMessageSeq(DecoderType& decoder)
+    {
+        decoder.reset();
+        checkSeqUnwind(decoder, typename gens<sizeof...(FieldTypes)>::type());
+    }
+
+    template<typename DecoderType, int ...S>
+    bool checkSeqUnwind(DecoderType& decoder, seq<S...>)
+    {
+        return checkMessageSeq(decoder, std::get<S>(_fieldList) ...);
+    }
+
+    template<typename DecoderType, typename FieldType, typename... FieldTypeList>
+    bool checkMessageSeq(DecoderType& decoder, FieldType& field, FieldTypeList&... fieldList)
+    {
+        if(field.IS_REQUIRED)
+        {
+            if(!decoder.isValid() || decoder.currentField().first != field.FID)
+            {
+                // mandatory not in sequence
+                return false;
+            }
+            else // decoder.currentField().first == field.FID
+            {
+                decoder.next();
+            }
+        }
+        else
+        {
+            if(decoder.isValid() && decoder.currentField().first == field.FID)
+            {
+                decoder.next();
+            }
+        }
+
+        return checkMessageSeq(decoder, fieldList...);
+    }
+
+    template<typename DecoderType, typename FieldType>
+    bool checkMessageSeq(DecoderType& decoder, FieldType& field)
+    {
+        if(field.IS_REQUIRED)
+        {
+            if(!decoder.isValid() || decoder.currentField().first != field.FID)
+            {
+                // mandatory not in sequence
+                return false;
+            }
+            else // decoder.currentField().first == field.FID
+            {
+                decoder.next();
+            }
+        }
+        else
+        {
+            if(!decoder.isValid() || (decoder.currentField().first == field.FID && decoder.isLast()))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     // setSubField
     template<typename DecoderType, int ...S>
@@ -259,6 +343,9 @@ private:
     std::tuple<FieldTypes...>   _fieldList;
 
 };
+
+template<typename Validate, typename... FieldTypes>
+constexpr int SFIXCollection<Validate, FieldTypes...>::FID;
 
 template<typename Validate, typename... FieldTypes>
 constexpr StringConstant SFIXCollection<Validate, FieldTypes...>::NAME;

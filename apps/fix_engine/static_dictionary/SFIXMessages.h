@@ -19,6 +19,8 @@ namespace vf_fix
 template<const StringConstant&  Name,
          const StringConstant&  Type,
          typename               Validate,
+         typename               HeaderType,
+         typename               TrailerType,
          typename...            FieldTypes>
 class SFIXMessage
 {
@@ -43,19 +45,39 @@ public:
             return false;
         }
 
+        // set headers
+        if(!_header.set(decoder))
+        {
+            return false;
+        }
+
+        decoder.next();
+        bool msgComplete = false;
         do
         {
-            // TODO - validate fields ?
             if(!setSubField(decoder))
             {
-                // error
+                // are we at the end of message ?
+                if(_trailer.set(decoder))
+                {
+                    // make sure we are at the end of the message that was passed in
+                    if(decoder.isLast())
+                    {
+                        // should not be any fields left ?!
+                        return false;
+                    }
+                    msgComplete = true;
+                    break; // we're done
+                }
+
+                // else error
                 return false;
             }
         } while(decoder.next());
 
-        return true;
+        // optional validation check
+        return validate<VALIDATE>(msgComplete);
     }
-
 
     template<typename DecoderType>
     bool setSubField(DecoderType& decoder)
@@ -68,14 +90,36 @@ public:
         return isSubFieldUnwind(fid, typename gens<sizeof...(FieldTypes)>::type());
     }
 
+    constexpr bool isHeaderField(int fid)
+    {
+        return _header.isSubField(fid);
+    }
+
+    constexpr bool isTrailerField(int fid)
+    {
+        return _trailer.isSubField(fid);
+    }
+
     std::ostringstream& toString(std::ostringstream& os)
     {
-        return toStringUnwind(os, typename gens<sizeof...(FieldTypes)>::type());
+        _header.toString(os);
+        toStringUnwind(os, typename gens<sizeof...(FieldTypes)>::type());
+        return _trailer.toString(os);
     }
 
     bool getSubField(int fid, CachedField& retField)
     {
         return getSubFieldUnwind(fid, retField, typename gens<sizeof...(FieldTypes)>::type());
+    }
+
+    bool getHeaderField(int fid, CachedField& retField)
+    {
+        return _header.getSubField(fid, retField);
+    }
+
+    bool getTrailerField(int fid, CachedField& retField)
+    {
+        return _trailer.getSubField(fid, retField);
     }
 
     template<typename GroupType>
@@ -85,6 +129,22 @@ public:
     }
 
 private:
+    template<bool T>
+    typename std::enable_if<T, bool>::type validate(bool msgComplete)
+    {
+        if(!msgComplete)
+        {
+            return false;
+        }
+
+        return checkRequired();
+    }
+
+    template<bool T>
+    typename std::enable_if<!T, bool>::type validate(bool msgComplete)
+    {
+        return msgComplete;
+    }
 
     // setSubField
     template<typename DecoderType, int ...S>
@@ -273,17 +333,54 @@ private:
         return false;
     }
 
+    // checkRequired
+    bool checkRequired()
+    {
+        return checkRequiredUnwind(typename gens<sizeof...(FieldTypes)>::type());
+    }
+
+    template<int ...S>
+    bool checkRequiredUnwind(seq<S...>)
+    {
+        return checkRequired(std::get<S>(_fieldList) ...);
+    }
+
+    template<typename FieldType, typename... FieldTypeList>
+    bool checkRequired(FieldType& field, FieldTypeList&... fieldList)
+    {
+        if(field.IS_REQUIRED && !field.isSet())
+        {
+            // TODO - log ? Maybe a specific validation log setting
+            return false;
+        }
+        return checkRequired(fieldList...);
+    }
+
+    template<typename FieldType>
+    bool checkRequired(FieldType& field)
+    {
+        if(field.IS_REQUIRED && !field.isSet())
+        {
+            // TODO - log ? Maybe a specific validation log setting
+            return false;
+        }
+        // else
+        return true;
+    }
+
+    HeaderType                  _header;
+    TrailerType                 _trailer;
     std::tuple<FieldTypes...>   _fieldList;
 };
 
-template<const StringConstant& Name, const StringConstant& Type, typename Validate, typename... FieldTypes>
-constexpr StringConstant SFIXMessage<Name, Type, Validate, FieldTypes...>::NAME;
+template<const StringConstant& Name, const StringConstant& Type, typename Validate, typename HeaderType, typename TrailerType, typename... FieldTypes>
+constexpr StringConstant SFIXMessage<Name, Type, Validate, HeaderType, TrailerType, FieldTypes...>::NAME;
 
-template<const StringConstant& Name, const StringConstant& Type, typename Validate, typename... FieldTypes>
-constexpr StringConstant SFIXMessage<Name, Type, Validate, FieldTypes...>::TYPE;
+template<const StringConstant& Name, const StringConstant& Type, typename Validate, typename HeaderType, typename TrailerType, typename... FieldTypes>
+constexpr StringConstant SFIXMessage<Name, Type, Validate, HeaderType, TrailerType, FieldTypes...>::TYPE;
 
-template<const StringConstant& Name, const StringConstant& Type, typename Validate, typename... FieldTypes>
-constexpr bool SFIXMessage<Name, Type, Validate, FieldTypes...>::VALIDATE;
+template<const StringConstant& Name, const StringConstant& Type, typename Validate, typename HeaderType, typename TrailerType, typename... FieldTypes>
+constexpr bool SFIXMessage<Name, Type, Validate, HeaderType, TrailerType, FieldTypes...>::VALIDATE;
 
 }  // namespace vf_fix
 

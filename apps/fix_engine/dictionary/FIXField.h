@@ -57,7 +57,9 @@ public:
         MONTH_YEAR,
         UTC_TIMESTAMP,
         UTC_TIME_ONLY,
+        TIME,
         UTC_DATE_ONLY,
+        DATE,
         LOCAL_MKT_DATE,
         TZ_TIME_ONLY,
         TZ_TIMESTAMP,
@@ -178,6 +180,14 @@ public:
         else if(!lowerType.compare("utcdateonly"))
         {
             _type = UTC_DATE_ONLY;
+        }
+        else if(!lowerType.compare("time"))
+        {
+            _type = TIME;
+        }
+        else if(!lowerType.compare("date"))
+        {
+            _type = DATE;
         }
         else if(!lowerType.compare("localmktdate"))
         {

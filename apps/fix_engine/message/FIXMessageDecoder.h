@@ -131,6 +131,11 @@ public:
         return _currPos < _numFields;
     }
 
+    bool isLast()
+    {
+        return _currPos == _numFields-1;
+    }
+
 private:
     FieldArrType   _fieldArrays;
     size_t         _numFields;

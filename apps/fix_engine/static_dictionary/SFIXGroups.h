@@ -78,8 +78,6 @@ public:
                 return false;
             }
 
-            // TODO - validate fields ?
-
             auto& subField = decoder.currentField();
             int fid = subField.first;
 
@@ -119,7 +117,18 @@ public:
             }
         }
 
+        // optional validation check
+        if(!validate<VALIDATE>())
+        {
+            return false;
+        }
+
         return true;
+    }
+
+    bool isSet()
+    {
+        return _numRepeating>0;
     }
 
     int getNumRepeating()
@@ -165,6 +174,17 @@ public:
     }
 
 private:
+    template<bool T>
+    typename std::enable_if<T, bool>::type validate()
+    {
+        return checkRequired();
+    }
+
+    template<bool T>
+    typename std::enable_if<!T, bool>::type validate()
+    {
+        return true;
+    }
 
     // setSubField
     template<typename DecoderType, int ...S>
@@ -338,6 +358,49 @@ private:
     std::ostringstream& toString(std::ostringstream& os, FieldType& field)
     {
         return field.toString(os);
+    }
+
+    // checkRequired
+    bool checkRequired()
+    {
+        return checkRequiredUnwind(typename gens<sizeof...(FieldTypes)>::type());
+    }
+
+    template<int ...S>
+    bool checkRequiredUnwind(seq<S...>)
+    {
+        for(int index=0;index<_numRepeating;++index)
+        {
+            if(!checkRequired(std::get<S>(_fieldList[index]) ...))
+            {
+                // TODO - log ?
+                return false;
+            }
+        }
+        return true;
+    }
+
+    template<typename FieldType, typename... FieldTypeList>
+    bool checkRequired(FieldType& field, FieldTypeList&... fieldList)
+    {
+        if(field.IS_REQUIRED && !field.isSet())
+        {
+            // TODO - log ? Maybe a specific validation log setting
+            return false;
+        }
+        return checkRequired(fieldList...);
+    }
+
+    template<typename FieldType>
+    bool checkRequired(FieldType& field)
+    {
+        if(field.IS_REQUIRED && !field.isSet())
+        {
+            // TODO - log ? Maybe a specific validation log setting
+            return false;
+        }
+        // else
+        return true;
     }
 
     int                         _numRepeating;

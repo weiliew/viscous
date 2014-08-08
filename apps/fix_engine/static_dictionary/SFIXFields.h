@@ -142,6 +142,7 @@ private:
             return false;
         }
 
+        // Might not need this check - we will check required fields in groups, collection and message level as well
         const char * val = decoder.currentField().second;
         if(IS_REQUIRED && !val)
         {
@@ -167,6 +168,7 @@ private:
         return FieldTypeStr == StringConstant("INT") ? FIXField::FieldType::INT :
                FieldTypeStr == StringConstant("LENGTH") ? FIXField::FieldType::LENGTH :
                FieldTypeStr == StringConstant("TAGNUM") ? FIXField::FieldType::TAG_NUM :
+               FieldTypeStr == StringConstant("SEQNUM") ? FIXField::FieldType::SEQ_NUM :
                FieldTypeStr == StringConstant("NUMINGROUP") ? FIXField::FieldType::NUM_IN_GROUP :
                FieldTypeStr == StringConstant("DAYOFMONTH") ? FIXField::FieldType::DAY_OF_MONTH :
                FieldTypeStr == StringConstant("FLOAT") ? FIXField::FieldType::FLOAT :
@@ -186,6 +188,8 @@ private:
                FieldTypeStr == StringConstant("UTCTIMESTAMP") ? FIXField::FieldType::UTC_TIMESTAMP :
                FieldTypeStr == StringConstant("UTCTIMEONLY") ? FIXField::FieldType::UTC_TIME_ONLY :
                FieldTypeStr == StringConstant("UTCDATEONLY") ? FIXField::FieldType::UTC_DATE_ONLY :
+               FieldTypeStr == StringConstant("TIME") ? FIXField::FieldType::TIME :
+               FieldTypeStr == StringConstant("DATE") ? FIXField::FieldType::DATE :
                FieldTypeStr == StringConstant("LOCALMKTDATE") ? FIXField::FieldType::LOCAL_MKT_DATE :
                FieldTypeStr == StringConstant("TZTIMEONLY") ? FIXField::FieldType::TZ_TIME_ONLY :
                FieldTypeStr == StringConstant("TZTIMESTAMP") ? FIXField::FieldType::TZ_TIMESTAMP :

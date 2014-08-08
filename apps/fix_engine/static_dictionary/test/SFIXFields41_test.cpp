@@ -78,11 +78,20 @@ BOOST_AUTO_TEST_CASE( MessagePool_test_1 )
     BOOST_CHECK(!runTest(std::string("136=3") + (char) SOH + "137=10.00" + (char) SOH + "138=X" + (char) SOH + "139=1" +
                                                (char) SOH + "137=10.00" + (char) SOH + "138=A" + (char) SOH + "139=2"+ (char) SOH));
 
-    /*
-    std::string msgTestStr(std::string("753=1") + (char) SOH + "137=10.00" + (char) SOH + "138=X" + (char) SOH + "139=1"+ (char) SOH + "999=TEST_FIELD"+ (char) SOH);
+    std::string msgTestStr(std::string("8=FIX4.0") + (char) SOH +
+                                       "9=100" + (char) SOH + // not real length - just for testing
+                                       "35=M" + (char) SOH +
+                                       "49=sender" + (char) SOH +
+                                       "56=target" + (char) SOH +
+                                       "34=1" + (char) SOH +
+                                       "97=N" + (char) SOH +
+                                       "52=31/7/2014 17:35:00.000" + (char) SOH +
+                                       "66=100" + (char) SOH +
+                                       "10=123" + (char) SOH);
     FIXMessageDecoder<100> fieldsDecoder;
     BOOST_CHECK(fieldsDecoder.parseBuffer((char *) msgTestStr.c_str(), msgTestStr.length()));
-    SFIXMessage_Test999<std::false_type> msg1;
+
+    fix_defs::messages::ListStatus::SFIXMessage_ListStatus<std::false_type, 10> msg1;
     BOOST_CHECK(msg1.set(fieldsDecoder));
 
     std::ostringstream ostr;
@@ -90,13 +99,61 @@ BOOST_AUTO_TEST_CASE( MessagePool_test_1 )
     BOOST_MESSAGE(ostr.str());
 
     fieldsDecoder.reset();
-    SFIXMessage_Test999<std::true_type> msg2;
+    fix_defs::messages::ListStatus::SFIXMessage_ListStatus<std::true_type, 10> msg2;
     BOOST_CHECK(msg2.set(fieldsDecoder));
 
     std::ostringstream ostr2;
     msg2.toString(ostr2);
     BOOST_MESSAGE(ostr2.str());
-    */
+
+    {
+    // out of order hdr seq check
+    std::string msgTestStr(std::string("8=FIX4.0") + (char) SOH +
+                                           "35=M" + (char) SOH +
+                                           "9=100" + (char) SOH + // not real length - just for testing
+                                           "49=sender" + (char) SOH +
+                                           "56=target" + (char) SOH +
+                                           "34=1" + (char) SOH +
+                                           "97=N" + (char) SOH +
+                                           "52=31/7/2014 17:35:00.000" + (char) SOH +
+                                           "66=100" + (char) SOH +
+                                           "10=123" + (char) SOH);
+    BOOST_CHECK(fieldsDecoder.parseBuffer((char *) msgTestStr.c_str(), msgTestStr.length()));
+    BOOST_CHECK(msg1.set(fieldsDecoder));
+    BOOST_CHECK(!msg2.set(fieldsDecoder));
+    }
+
+    {
+    // missing mandatory msg check
+    std::string msgTestStr = (std::string("8=FIX4.0") + (char) SOH +
+                                        "9=100" + (char) SOH + // not real length - just for testing
+                                        "35=M" + (char) SOH +
+                                       "49=sender" + (char) SOH +
+                                       "56=target" + (char) SOH +
+                                       "34=1" + (char) SOH +
+                                       "97=N" + (char) SOH +
+                                       "52=31/7/2014 17:35:00.000" + (char) SOH +
+                                       "66=100" + (char) SOH);
+    BOOST_CHECK(fieldsDecoder.parseBuffer((char *) msgTestStr.c_str(), msgTestStr.length()));
+    BOOST_CHECK(msg1.set(fieldsDecoder));
+    BOOST_CHECK(!msg2.set(fieldsDecoder));
+    }
+
+    {
+    // missing mandatory hdr seq check
+    std::string msgTestStr(std::string("8=FIX4.0") + (char) SOH +
+                                           "9=100" + (char) SOH + // not real length - just for testing
+                                           "49=sender" + (char) SOH +
+                                           "56=target" + (char) SOH +
+                                           "34=1" + (char) SOH +
+                                           "97=N" + (char) SOH +
+                                           "52=31/7/2014 17:35:00.000" + (char) SOH +
+                                           "66=100" + (char) SOH +
+                                           "10=123" + (char) SOH);
+    BOOST_CHECK(fieldsDecoder.parseBuffer((char *) msgTestStr.c_str(), msgTestStr.length()));
+    BOOST_CHECK(msg1.set(fieldsDecoder));
+    BOOST_CHECK(!msg2.set(fieldsDecoder));
+    }
 }
 
 

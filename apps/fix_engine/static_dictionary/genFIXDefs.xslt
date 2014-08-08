@@ -111,7 +111,7 @@ namespace fields
 <xsl:for-each select="field">
 <xsl:if test="@type != 'NUMINGROUP'">
 <xsl:text disable-output-escaping="yes">
-    template&#60;typename Required, typename Validate&#62;</xsl:text>
+    template&#60;typename Required = std::false_type, typename Validate = std::false_type&#62;</xsl:text>
     using SFIXField_<xsl:value-of select="@name"/><xsl:text disable-output-escaping="yes"> = SFIXField&#60;</xsl:text>
         <xsl:value-of select="@number"/>, fieldNames::<xsl:value-of select="@name"/>, fieldTypes::<xsl:value-of select="@type"/>,<xsl:choose>
 <xsl:when test="value"> arrays::StrArrEnum_<xsl:value-of select="@number"/>, arrays::StrArrDesc_<xsl:value-of select="@number"/>,</xsl:when>
@@ -132,7 +132,7 @@ namespace fields
 <xsl:variable name="groupfid" select="//fields/field[@name = $fieldname]/@number"/>
 
 <xsl:text disable-output-escaping="yes">
-        template&#60;typename Required, typename Validate, unsigned int Capacity&#62;</xsl:text>
+        template&#60;typename Required = std::false_type, typename Validate = std::false_type, unsigned int Capacity = 50&#62;</xsl:text>
         using SFIXGroup_<xsl:value-of select="@name"/><xsl:text disable-output-escaping="yes"> = SFIXGroup&#60;</xsl:text>
             <xsl:value-of select="$groupfid"/>, fieldNames::<xsl:value-of select="@name"/><xsl:text disable-output-escaping="yes">, Required, Validate, Capacity
 </xsl:text>
@@ -180,10 +180,11 @@ namespace messages
 <xsl:apply-templates select="group"/>
 
 <xsl:text disable-output-escaping="yes">
-        template&#60;typename Validate, unsigned int Capacity&#62;</xsl:text>
+        template&#60;typename Validate = std::false_type, unsigned int Capacity = 50&#62;</xsl:text>
         using SFIXMessage_<xsl:value-of select="@name"/><xsl:text disable-output-escaping="yes"> = SFIXMessage&#60;</xsl:text>
             <xsl:value-of select="@name"/>, message_type::msg_<xsl:value-of select="@msgtype"/>, Validate<xsl:text disable-output-escaping="yes">
             , header::SFIXMessageHeader&#60;Validate, Capacity&#62;
+            , trailer::SFIXMessageTrailer&#60;Validate, Capacity&#62;
 </xsl:text>
 <xsl:for-each select="*">
 <xsl:choose>
@@ -202,7 +203,7 @@ namespace messages
 <xsl:text disable-output-escaping="yes">, Validate, Capacity&#62;
 </xsl:text></xsl:when>
 </xsl:choose>
-</xsl:for-each><xsl:text disable-output-escaping="yes">            , trailer::SFIXMessageTrailer&#60;Validate, Capacity&#62;&#62;;
+</xsl:for-each><xsl:text disable-output-escaping="yes">&#62;;
     } 
 </xsl:text>
 </xsl:for-each>
@@ -229,14 +230,14 @@ namespace header
 <xsl:choose>
 <xsl:when test="name() = 'field'">            , fields::SFIXField_<xsl:value-of select="@name"/><xsl:text disable-output-escaping="yes">&#60;</xsl:text>
 <xsl:choose>
-<xsl:when test="@required = Y">std::true_type</xsl:when>
+<xsl:when test="@required = 'Y'">std::true_type</xsl:when>
 <xsl:otherwise>std::false_type</xsl:otherwise>
 </xsl:choose>
 <xsl:text disable-output-escaping="yes">, Validate&#62;
 </xsl:text></xsl:when>
 <xsl:when test="name() = 'group'">            , SFIXGroup_<xsl:value-of select="@name"/><xsl:text disable-output-escaping="yes">&#60;</xsl:text>
 <xsl:choose>
-<xsl:when test="@required = Y">std::true_type</xsl:when>
+<xsl:when test="@required = 'Y'">std::true_type</xsl:when>
 <xsl:otherwise>std::false_type</xsl:otherwise>
 </xsl:choose>
 <xsl:text disable-output-escaping="yes">, Validate, Capacity&#62;
@@ -263,14 +264,14 @@ namespace trailer
 <xsl:choose>
 <xsl:when test="name() = 'field'">            , fields::SFIXField_<xsl:value-of select="@name"/><xsl:text disable-output-escaping="yes">&#60;</xsl:text>
 <xsl:choose>
-<xsl:when test="@required = Y">std::true_type</xsl:when>
+<xsl:when test="@required = 'Y'">std::true_type</xsl:when>
 <xsl:otherwise>std::false_type</xsl:otherwise>
 </xsl:choose>
 <xsl:text disable-output-escaping="yes">, Validate&#62;
 </xsl:text></xsl:when>
 <xsl:when test="name() = 'group'">            , SFIXGroup_<xsl:value-of select="@name"/><xsl:text disable-output-escaping="yes">&#60;</xsl:text>
 <xsl:choose>
-<xsl:when test="@required = Y">std::true_type</xsl:when>
+<xsl:when test="@required = 'Y'">std::true_type</xsl:when>
 <xsl:otherwise>std::false_type</xsl:otherwise>
 </xsl:choose>
 <xsl:text disable-output-escaping="yes">, Validate, Capacity&#62;

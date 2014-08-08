@@ -27,8 +27,8 @@ what apps ?
 6. Co-routine implementatiion and re-factor architecture/ streamline architecture to remove unused options etc
 
 TODO next -
-FIX message parsing and processing
-FIX Dictionary processing
 FIX IO - initiator and acceptor
+Add tests for FIX messages
+FIX message creaation ?
+FIX message performance figures ?
 
-# use xlst to build constexpr lookup table for the data dictionary including template for the messages and components, groups containers etc
