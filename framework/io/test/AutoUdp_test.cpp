@@ -212,8 +212,8 @@ BOOST_AUTO_TEST_CASE( AutoUdp_test_1 )
     UdpPublisherType publisher(myLogger);
 
     PubTimer<UdpPublisherType> pubTimer(publisher);
-    publisher.registerConnectCallback(boost::bind(&PubTimer<UdpPublisherType>::onConnect, &pubTimer));
-    publisher.registerDisconnectCallback(boost::bind(&PubTimer<UdpPublisherType>::onDisconnect, &pubTimer));
+    publisher.registerConnectCallback(std::bind(&PubTimer<UdpPublisherType>::onConnect, &pubTimer));
+    publisher.registerDisconnectCallback(std::bind(&PubTimer<UdpPublisherType>::onDisconnect, &pubTimer));
 
     std::shared_ptr<std::thread> thread3 = std::make_shared<std::thread>(boost::bind(&boost::asio::io_service::run, &publisher.getIO()));
     thread3->detach();

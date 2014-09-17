@@ -93,23 +93,22 @@ void runTest()
 
     FactoryType bufferFactory(0);
 
-    SignalFactory<SignalType> signalFactory("SIG", io);
-    auto inputSignal = signalFactory.create();
-    auto outputSignal = signalFactory.create();
+    SignalType inputSignal("SIG", io);
+    SignalType outputSignal("SIG", io);
 
     FactoryType msgFactory;
-    MessageBuilder<std::shared_ptr<SignalType>, FactoryType, InlineIO> msgBuilder(outputSignal, msgFactory);
+    MessageBuilder<SignalType, FactoryType, InlineIO> msgBuilder(outputSignal, msgFactory);
 
-    inputSignal->subscribe(&msgBuilder, 100);
+    inputSignal.subscribe(&msgBuilder, 100);
 
     // create the subscriber
     Sub<MessagePtrType> sub;
-    outputSignal->subscribe(&sub, 100);
+    outputSignal.subscribe(&sub, 100);
 
     if(InlineIO::value == false)
     {
-        inputSignal->run();
-        outputSignal->run();
+        inputSignal.run();
+        outputSignal.run();
     }
 
     std::for_each(inputArray.begin(), inputArray.end(), [&inputSignal, &msgFactory](std::string msg){
@@ -117,11 +116,11 @@ void runTest()
         fixMsg->setBuffer(msg.data(), msg.size());
         if(InlineIO::value == true)
         {
-            inputSignal->dispatch(fixMsg);
+            inputSignal.dispatch(fixMsg);
         }
         else
         {
-            inputSignal->post(fixMsg);
+            inputSignal.post(fixMsg);
         }
     });
 

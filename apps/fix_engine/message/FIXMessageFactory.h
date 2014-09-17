@@ -49,7 +49,7 @@ public:
             toRet = PooledBufferFactory<PoolType>::create();
         }
 
-        // TODO - how to set factry into the fix message ?
+        // TODO - how to set factory into the fix message ?
         // toRet->setFactory(this);
 
         return toRet;

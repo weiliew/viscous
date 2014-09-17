@@ -168,6 +168,11 @@ public:
         return getSubGroupUnwind(fid, index, retField, typename gens<sizeof...(FieldTypes)>::type());
     }
 
+    void clear()
+    {
+        clearUnwind();
+    }
+
     std::ostringstream& toString(std::ostringstream& os)
     {
         return toStringUnwind(os, typename gens<sizeof...(FieldTypes)>::type());
@@ -334,6 +339,29 @@ private:
     getSubGroup(int fid, GroupType& retField, FieldType& field)
     {
         return false;
+    }
+
+    // clear
+    template<int ...S>
+    void clearUnwind(seq<S...>)
+    {
+        for(int index=0;index<_numRepeating;++index)
+        {
+            clear(std::get<S>(_fieldList[index]) ...);
+        }
+    }
+
+    template<typename FieldType, typename... FieldTypeList>
+    void clear(FieldType& field, FieldTypeList&... fieldList)
+    {
+        field.clear();
+        clear(fieldList...);
+    }
+
+    template<typename FieldType>
+    void clear(FieldType& field)
+    {
+        return field.clear();
     }
 
     // toString

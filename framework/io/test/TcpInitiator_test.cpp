@@ -100,8 +100,8 @@ BOOST_AUTO_TEST_CASE( TcpInitiator_Test_1 )
 
     typedef InitiatorCallback<InitiatorType> InitiatorCallbackType;
     InitiatorCallbackType cb(tcpInitiator);
-    tcpInitiator.registerConnectCallback(boost::bind(&InitiatorCallbackType::onConnect, &cb));
-    tcpInitiator.registerDisconnectCallback(boost::bind(&InitiatorCallbackType::onDisconnect, &cb));
+    tcpInitiator.registerConnectCallback(std::bind(&InitiatorCallbackType::onConnect, &cb));
+    tcpInitiator.registerDisconnectCallback(std::bind(&InitiatorCallbackType::onDisconnect, &cb));
 
     Sub1<LockingFixedBuffer1k::BufferPtrType> sub1;
     tcpInitiator.getCallbackSignal().subscribe(&sub1, 100);

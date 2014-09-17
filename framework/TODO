@@ -27,8 +27,11 @@ what apps ?
 6. Co-routine implementatiion and re-factor architecture/ streamline architecture to remove unused options etc
 
 TODO next -
-* FIX IO - initiator and acceptor
+* FIX IO - initiator and acceptor + FIXSession
 Add tests for FIX messages
 FIX message creaation ?
 FIX message performance figures ?
 
+New :
+Refactor code to replace signals with co-routine
+Replace buffer pool + queues with use of unique_ptr as a possible transfer instead of raw ptr type

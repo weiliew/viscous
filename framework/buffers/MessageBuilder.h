@@ -20,20 +20,18 @@
  * messages if necessary - i.e. when there's > 1 message in a single buffer passed in.
  * Requirements :
  * The incoming message type must match outgoing message type for efficiency
- * ElementType must be a smart ptr type
  */
 
 namespace vf_common
 {
 
-// TODO - maybe use enable_if to make sure MsgType is a shart ptr ?
-template<typename SignalPtrType, typename FactoryType, typename InlineIO>
+template<typename SignalType, typename FactoryType, typename InlineIO>
 class MessageBuilder
 {
 public:
-    typedef typename SignalPtrType::element_type::ElementType   MsgType;
+    typedef typename SignalType::element_type   MsgType;
 
-    MessageBuilder(SignalPtrType outgoingSignal, FactoryType& factory)
+    MessageBuilder(SignalType& outgoingSignal, FactoryType& factory)
     : _factory(factory)
     , _msgSignal(outgoingSignal)
     {
@@ -134,7 +132,7 @@ public:
     }
 
 
-    SignalPtrType getSignal()
+    SignalType& getSignal()
     {
         return _msgSignal;
     }
@@ -161,18 +159,18 @@ private:
     typename std::enable_if<T::value, void>::type
     processBuffer(MsgType& buffer)
     {
-        _msgSignal->dispatch(buffer);
+        _msgSignal.dispatch(buffer);
     }
 
     template<typename T> // if T(InlineIO) is false
     typename std::enable_if<!T::value, void>::type
     processBuffer(MsgType& buffer)
     {
-        _msgSignal->post(buffer);
+        _msgSignal.post(buffer);
     }
 
     FactoryType&    _factory;
-    SignalPtrType   _msgSignal;
+    SignalType&     _msgSignal;
     MsgType         _msgCache;
 };
 

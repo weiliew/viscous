@@ -41,7 +41,7 @@ public:
         ++_count;
     }
 
-    int _count;
+    size_t _count;
 };
 
 
@@ -127,33 +127,32 @@ void run_test()
     typedef Signal<std::shared_ptr<TestMessage>> SignalType;
     typedef SharedPtrBufferFactory<TestMessage>  FactoryType;
 
-    SignalFactory<SignalType> signalFactory("SIG", io);
-    auto inputSignal = signalFactory.create();
-    auto outputSignal = signalFactory.create();
+    SignalType inputSignal("SIG", io);
+    SignalType outputSignal("SIG", io);
 
     FactoryType msgFactory;
-    MessageBuilder<std::shared_ptr<SignalType>, FactoryType, InlineIO> msgBuilder(outputSignal, msgFactory);
+    MessageBuilder<SignalType, FactoryType, InlineIO> msgBuilder(outputSignal, msgFactory);
 
-    inputSignal->subscribe(&msgBuilder, 100);
+    inputSignal.subscribe(&msgBuilder, 100);
 
     // create the subscriber
     Sub<std::shared_ptr<TestMessage>> sub;
-    outputSignal->subscribe(&sub, 100);
+    outputSignal.subscribe(&sub, 100);
 
     if(InlineIO::value == false)
     {
-        inputSignal->run();
-        outputSignal->run();
+        inputSignal.run();
+        outputSignal.run();
     }
 
     std::for_each(inputBuffer.begin(), inputBuffer.end(), [&inputSignal](std::shared_ptr<TestMessage> msg){
         if(InlineIO::value == true)
         {
-            inputSignal->dispatch(msg);
+            inputSignal.dispatch(msg);
         }
         else
         {
-            inputSignal->post(msg);
+            inputSignal.post(msg);
         }
     });
 

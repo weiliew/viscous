@@ -102,7 +102,7 @@ void runTest()
     for(size_t count=0;count<1000;++count)
     {
         auto payload = producer.create();
-        io.post(boost::bind(&TestUser<FactoryType>::receive, &consumer, payload));
+        io.post(std::bind(&TestUser<FactoryType>::receive, &consumer, payload));
     }
 
     // test completed - allow time for work to finish

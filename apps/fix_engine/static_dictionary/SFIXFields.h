@@ -25,6 +25,7 @@ namespace vf_fix
 {
 
 template<int                        Fid,
+         const StringConstant&      FidStr,
          const StringConstant&      Name,
          const StringConstant&      FieldTypeStr,
          const StringConstantArr&   EnumVal,
@@ -36,6 +37,7 @@ class SFIXField
 public:
     constexpr static int                   FID         = Fid;
     constexpr static StringConstant        NAME        = Name;
+    constexpr static StringConstant        FID_STR     = FidStr; // this is used for building FIX messages, e.g. set to '35='
     constexpr static StringConstant        TYPE_NAME   = FieldTypeStr;
     constexpr static StringConstantArr     ENUM_VAL    = EnumVal;
     constexpr static StringConstantArr     DESC_VAL    = DescVal;
@@ -81,6 +83,12 @@ public:
         return _value;
     }
 
+    template<typename ValType>
+    void setValue(ValType& val)
+    {
+        _value.setCachedVal<ValType>(val);
+    }
+
     int index()
     {
         if(_valIndex > 0 || !_value.value())
@@ -118,11 +126,17 @@ public:
         return NULL;
     }
 
+    void clear()
+    {
+        _valIndex = -1;
+        _value.clear();
+    }
+
     std::ostringstream& toString(std::ostringstream& os)
     {
         if(isSet())
         {
-            os << (int) FID << "=" << (_value.value() ? _value.value() : "0") << "|";
+            os << FidStr << (_value.value() ? _value.value() : "0") << "|";
         }
         return os;
     }
@@ -209,26 +223,29 @@ private:
     CachedField     _value;
 };
 
-template<int Fid, const StringConstant& Name, const StringConstant& FieldTypeStr, const StringConstantArr& EnumVal, const StringConstantArr& DescVal, typename Required, typename Validate>
-constexpr int SFIXField<Fid, Name, FieldTypeStr, EnumVal, DescVal, Required, Validate>::FID;
+template<int Fid, const StringConstant& FidStr, const StringConstant& Name, const StringConstant& FieldTypeStr, const StringConstantArr& EnumVal, const StringConstantArr& DescVal, typename Required, typename Validate>
+constexpr int SFIXField<Fid, FidStr, Name, FieldTypeStr, EnumVal, DescVal, Required, Validate>::FID;
 
-template<int Fid, const StringConstant& Name, const StringConstant& FieldTypeStr, const StringConstantArr& EnumVal, const StringConstantArr& DescVal, typename Required, typename Validate>
-constexpr StringConstant SFIXField<Fid, Name, FieldTypeStr, EnumVal, DescVal, Required, Validate>::NAME;
+template<int Fid, const StringConstant& FidStr, const StringConstant& Name, const StringConstant& FieldTypeStr, const StringConstantArr& EnumVal, const StringConstantArr& DescVal, typename Required, typename Validate>
+constexpr StringConstant SFIXField<Fid, FidStr, Name, FieldTypeStr, EnumVal, DescVal, Required, Validate>::FID_STR;
 
-template<int Fid, const StringConstant& Name, const StringConstant& FieldTypeStr, const StringConstantArr& EnumVal, const StringConstantArr& DescVal, typename Required, typename Validate>
-constexpr StringConstant SFIXField<Fid, Name, FieldTypeStr, EnumVal, DescVal, Required, Validate>::TYPE_NAME;
+template<int Fid, const StringConstant& FidStr, const StringConstant& Name, const StringConstant& FieldTypeStr, const StringConstantArr& EnumVal, const StringConstantArr& DescVal, typename Required, typename Validate>
+constexpr StringConstant SFIXField<Fid, FidStr, Name, FieldTypeStr, EnumVal, DescVal, Required, Validate>::NAME;
 
-template<int Fid, const StringConstant& Name, const StringConstant& FieldTypeStr, const StringConstantArr& EnumVal, const StringConstantArr& DescVal, typename Required, typename Validate>
-constexpr bool SFIXField<Fid, Name, FieldTypeStr, EnumVal, DescVal, Required, Validate>::IS_REQUIRED;
+template<int Fid, const StringConstant& FidStr, const StringConstant& Name, const StringConstant& FieldTypeStr, const StringConstantArr& EnumVal, const StringConstantArr& DescVal, typename Required, typename Validate>
+constexpr StringConstant SFIXField<Fid, FidStr, Name, FieldTypeStr, EnumVal, DescVal, Required, Validate>::TYPE_NAME;
 
-template<int Fid, const StringConstant& Name, const StringConstant& FieldTypeStr, const StringConstantArr& EnumVal, const StringConstantArr& DescVal, typename Required, typename Validate>
-constexpr bool SFIXField<Fid, Name, FieldTypeStr, EnumVal, DescVal, Required, Validate>::VALIDATE;
+template<int Fid, const StringConstant& FidStr, const StringConstant& Name, const StringConstant& FieldTypeStr, const StringConstantArr& EnumVal, const StringConstantArr& DescVal, typename Required, typename Validate>
+constexpr bool SFIXField<Fid, FidStr, Name, FieldTypeStr, EnumVal, DescVal, Required, Validate>::IS_REQUIRED;
 
-template<int Fid, const StringConstant& Name, const StringConstant& FieldTypeStr, const StringConstantArr& EnumVal, const StringConstantArr& DescVal, typename Required, typename Validate>
-constexpr StringConstantArr SFIXField<Fid, Name, FieldTypeStr, EnumVal, DescVal, Required, Validate>::ENUM_VAL;
+template<int Fid, const StringConstant& FidStr, const StringConstant& Name, const StringConstant& FieldTypeStr, const StringConstantArr& EnumVal, const StringConstantArr& DescVal, typename Required, typename Validate>
+constexpr bool SFIXField<Fid, FidStr, Name, FieldTypeStr, EnumVal, DescVal, Required, Validate>::VALIDATE;
 
-template<int Fid, const StringConstant& Name, const StringConstant& FieldTypeStr, const StringConstantArr& EnumVal, const StringConstantArr& DescVal, typename Required, typename Validate>
-constexpr StringConstantArr SFIXField<Fid, Name, FieldTypeStr, EnumVal, DescVal, Required, Validate>::DESC_VAL;
+template<int Fid, const StringConstant& FidStr, const StringConstant& Name, const StringConstant& FieldTypeStr, const StringConstantArr& EnumVal, const StringConstantArr& DescVal, typename Required, typename Validate>
+constexpr StringConstantArr SFIXField<Fid, FidStr, Name, FieldTypeStr, EnumVal, DescVal, Required, Validate>::ENUM_VAL;
+
+template<int Fid, const StringConstant& FidStr, const StringConstant& Name, const StringConstant& FieldTypeStr, const StringConstantArr& EnumVal, const StringConstantArr& DescVal, typename Required, typename Validate>
+constexpr StringConstantArr SFIXField<Fid, FidStr, Name, FieldTypeStr, EnumVal, DescVal, Required, Validate>::DESC_VAL;
 
 }  // namespace vf_fix
 

@@ -128,6 +128,13 @@ public:
         return getSubGroupUnwind(fid, retField, typename gens<sizeof...(FieldTypes)>::type());
     }
 
+    void clear()
+    {
+        _header.clear();
+        _trailer.clear();
+        clearUnwind();
+    }
+
 private:
     template<bool T>
     typename std::enable_if<T, bool>::type validate(bool msgComplete)
@@ -366,6 +373,26 @@ private:
         }
         // else
         return true;
+    }
+
+    // clear
+    template<int ...S>
+    void clearUnwind(seq<S...>)
+    {
+        clear(std::get<S>(_fieldList) ...);
+    }
+
+    template<typename FieldType, typename... FieldTypeList>
+    void clear(FieldType& field, FieldTypeList&... fieldList)
+    {
+        field.clear();
+        clear(fieldList...);
+    }
+
+    template<typename FieldType>
+    void clear(FieldType& field)
+    {
+        return field.clear();
     }
 
     HeaderType                  _header;

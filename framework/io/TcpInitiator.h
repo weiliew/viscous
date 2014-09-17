@@ -158,6 +158,11 @@ public:
         return _connected;
     }
 
+    void setReconnect(bool reconnect)
+    {
+        _reconnect = reconnect;
+    }
+
 private:
     void handleConnect(const boost::system::error_code& error)
     {

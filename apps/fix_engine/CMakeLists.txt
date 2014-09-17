@@ -11,6 +11,7 @@ MESSAGE("Processing application build [${CMAKE_CURRENT_SOURCE_DIR}]")
 add_subdirectory(message)
 add_subdirectory(dictionary)
 add_subdirectory(static_dictionary)
+add_subdirectory(io)
 
 EXECUTE_PROCESS(
     COMMAND find ${CMAKE_CURRENT_SOURCE_DIR} -maxdepth 1 -name *.cpp

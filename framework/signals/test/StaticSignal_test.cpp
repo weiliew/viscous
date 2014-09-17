@@ -31,9 +31,9 @@ struct PayloadType
 class Sub1
 {
 public:
-    void onData(std::shared_ptr<PayloadType> payload)
+    void onData(PayloadType& payload)
     {
-        BOOST_TEST_MESSAGE("Received callback on Sub1 with payload: " << payload->_payload.c_str() << " THREAD " << THREAD_ID);
+        BOOST_TEST_MESSAGE("Received callback on Sub1 with payload: " << payload._payload.c_str() << " THREAD " << THREAD_ID);
     }
 
 private:
@@ -42,9 +42,9 @@ private:
 class Sub2
 {
 public:
-    void onData(std::shared_ptr<PayloadType> payload)
+    void onData(PayloadType& payload)
     {
-        BOOST_TEST_MESSAGE("Received callback on Sub2 with payload: " << payload->_payload.c_str() << " THREAD " << THREAD_ID);
+        BOOST_TEST_MESSAGE("Received callback on Sub2 with payload: " << payload._payload.c_str() << " THREAD " << THREAD_ID);
     }
 
 private:
@@ -53,30 +53,29 @@ private:
 class Sub3
 {
 public:
-    void onData(std::shared_ptr<PayloadType> payload)
+    void onData(PayloadType& payload)
     {
-        BOOST_TEST_MESSAGE("Received callback on Sub3 with payload: " << payload->_payload.c_str() << " THREAD " << THREAD_ID);
+        BOOST_TEST_MESSAGE("Received callback on Sub3 with payload: " << payload._payload.c_str() << " THREAD " << THREAD_ID);
     }
 
 private:
 };
 
+class Sub4
+{
+public:
+    void onData(PayloadType& payload)
+    {
+        BOOST_TEST_MESSAGE("Received callback on Sub4 with payload: " << payload._payload.c_str() << " THREAD " << THREAD_ID);
+    }
+
+private:
+};
 
 class SubPerf
 {
 public:
-    void onData(std::shared_ptr<PayloadType> payload)
-    {
-        // do something meaningfull
-        int size = payload->_payload.size();
-        PayloadType * payloadPtr = payload.get();
-        for(int count=0;count<size;++count)
-        {
-            char c = payloadPtr->_payload.c_str()[count];
-        }
-    }
-
-    void onData2(PayloadType payload)
+    void onData(PayloadType& payload)
     {
         // do something meaningfull
         int size=payload._payload.size();
@@ -97,13 +96,18 @@ BOOST_AUTO_TEST_CASE( StaticSignal_test_1 )
     Sub2 sub2;
     Sub3 sub3;
 
-    std::shared_ptr<PayloadType> payload(new PayloadType());
-    payload->_payload = "Test1";
+    PayloadType payload;
+    payload._payload = "Test1";
 
     boost::asio::io_service io;
     boost::asio::io_service::work work(io);
-    SignalFactory<StaticSignal<Sub1, Sub2, Sub3>, Sub1, Sub2, Sub3> signalFactory("SIG1", io, sub1, sub2, sub3);
-    std::shared_ptr<StaticSignal<Sub1, Sub2, Sub3> > mySignal1 = signalFactory.create();
+
+    typedef StaticSignal<PayloadType, Sub1, Sub2, Sub3> SignalType;
+    SignalFactory<SignalType, Sub1, Sub2, Sub3> signalFactory("SIG1", io, sub1, sub2, sub3);
+    std::shared_ptr<SignalType> mySignal1 = signalFactory.create();
+
+    BOOST_CHECK(mySignal1->isPartOf<Sub2>());
+    BOOST_CHECK(!mySignal1->isPartOf<Sub4>());
 
     mySignal1->run();
 
@@ -124,13 +128,12 @@ BOOST_AUTO_TEST_CASE( StaticSignal_test_2 )
 
     SubPerf sub;
 
-    std::shared_ptr<PayloadType> payload(new PayloadType());
-    payload->_payload = "This is a performance test for callback function";
+    PayloadType payload;
+    payload._payload = "This is a performance test for callback function";
 
     boost::asio::io_service io;
     boost::asio::io_service::work work(io);
-    StaticSignal<SubPerf> mySignal("SIG", io, sub);
-
+    StaticSignal<PayloadType, SubPerf> mySignal("SIG", io, sub);
 
     BOOST_TEST_MESSAGE("NOTIFY 1");
     mySignal.run(3);
@@ -166,26 +169,14 @@ BOOST_AUTO_TEST_CASE( StaticSignal_test_2 )
     BOOST_TEST_MESSAGE("Time taken - dispatch: " << timediff << " microseconds");
     BOOST_TEST_MESSAGE("Time taken - dispatch(per message): " << (double) ((double)timediff/(double)numTests) << " microseconds");
 
-    BOOST_TEST_MESSAGE("Running perf test - CONTROL 1");
-    gettimeofday(&currTime, NULL);
-    for(int count=0;count<numTests;++count)
-    {
-        sub.onData(payload);
-    }
-    gettimeofday(&endTime, NULL);
-
-    timediff = 1000000*(endTime.tv_sec - currTime.tv_sec) + (endTime.tv_usec - currTime.tv_usec);
-    BOOST_TEST_MESSAGE("Time taken - control: " << timediff << " microseconds");
-    BOOST_TEST_MESSAGE("Time taken - control(per message): " << (double) ((double)timediff/(double)numTests) << " microseconds");
-
-    BOOST_TEST_MESSAGE("Running perf test - CONTROL 2");
+    BOOST_TEST_MESSAGE("Running perf test - CONTROL");
     PayloadType payload2;
     payload2._payload = "This is a performance test for callback function";
 
     gettimeofday(&currTime, NULL);
     for(int count=0;count<numTests;++count)
     {
-        sub.onData2(payload2);
+        sub.onData(payload2);
     }
     gettimeofday(&endTime, NULL);
 

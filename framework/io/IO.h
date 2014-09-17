@@ -18,6 +18,7 @@
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
+#include <functional>
 
 #include "utilities/Utilities.h"
 #include "logging/Log.h"
@@ -27,7 +28,8 @@
 namespace vf_common
 {
 
-template<typename Logger, typename BufferPoolType, typename SignalType, typename ProtocolType, typename InlineIO>
+template<typename Logger, typename BufferPoolType, typename SignalType,
+         typename ProtocolType, typename InlineIO, typename DirectDataCallback = std::false_type>
 class IO
 {
 public:
@@ -80,9 +82,9 @@ public:
         asyncWrite<ProtocolType, UseStrand>(buffer);
     }
 
-    /*virtual*/ int syncWrite(const std::string& message)
+    /*virtual*/ size_t syncWrite(const std::string& message)
     {
-        int transferred = 0;
+        size_t transferred = 0;
 
         if(UNLIKELY(!_socket.is_open()))
         {
@@ -115,9 +117,9 @@ public:
         return transferred;
     }
 
-    /*virtual*/ int syncWrite(typename BufferPoolType::BufferPtrType buffer)
+    /*virtual*/ size_t syncWrite(typename BufferPoolType::BufferPtrType buffer)
     {
-        int transferred = 0;
+        size_t transferred = 0;
 
         if(UNLIKELY(!_socket.is_open()))
         {
@@ -133,7 +135,7 @@ public:
         //transferred = boost::asio::write(_socket, boost::asio::buffer(buffer->buffer(), buffer->size()), boost::asio::transfer_all(), error);
         transferred = syncWrite<ProtocolType>(buffer, error);
 
-        if (transferred < buffer->size() || error)
+        if ((size_t) transferred < buffer->size() || error)
         {
             if(error)
             {
@@ -184,12 +186,12 @@ public:
         return _callbackSignal;
     }
 
-    void registerConnectCallback(boost::function<void (void)> func)
+    void registerConnectCallback(std::function<void (void)> func)
     {
         _connectCallback = func;
     }
 
-    void registerDisconnectCallback(boost::function<void (void)> func)
+    void registerDisconnectCallback(std::function<void (void)> func)
     {
         _disconnectCallback = func;
     }
@@ -202,6 +204,11 @@ public:
     typename BufferPoolType::PooledFactoryType& getBufferFactory()
     {
         return _bufferFactory;
+    }
+
+    void registerDirectCallback(std::function<void (typename BufferPoolType::BufferPtrType buffer)> func)
+    {
+        _dataCallback = func;
     }
 
 protected:
@@ -223,7 +230,7 @@ protected:
         if (LIKELY(!error))
         {
             buffer->setSize(bytes_transferred);
-            processBuffer<InlineIO>(buffer);
+            processBuffer<InlineIO, DirectDataCallback>(buffer);
             asyncRead<ProtocolType>();
         }
         else
@@ -270,23 +277,46 @@ protected:
     typename ProtocolType::endpoint                 _lastEndpoint;
 
     // callbacks
-    boost::function<void (void)>                    _connectCallback;
-    boost::function<void (void)>                    _disconnectCallback;
+    std::function<void (void)>                      _connectCallback;
+    std::function<void (void)>                      _disconnectCallback;
+
+    std::function<void (typename BufferPoolType::BufferPtrType buffer)> _dataCallback;
 
 private:
-    template<typename T> // if T(InlineIO) is true
-    typename std::enable_if<T::value, void>::type
+    template<typename T, typename D> // if T(InlineIO) is true and not direct (D)
+    typename std::enable_if<T::value && !D::value, void>::type
     processBuffer(typename BufferPoolType::BufferPtrType buffer)
     {
         _callbackSignal.dispatch(buffer);
     }
 
-    template<typename T> // if T(InlineIO) is false
-    typename std::enable_if<!T::value, void>::type
+    template<typename T, typename D> // if T(InlineIO) is false and not direct (D)
+    typename std::enable_if<!T::value && !D::value, void>::type
     processBuffer(typename BufferPoolType::BufferPtrType buffer)
     {
         _callbackSignal.post(buffer);
     }
+
+    template<typename T, typename D> // if DirectDataCallback is true
+    typename std::enable_if<T::value && D::value, void>::type
+    processBuffer(typename BufferPoolType::BufferPtrType buffer)
+    {
+        if(LIKELY(_dataCallback))
+        {
+            _dataCallback(buffer);
+        }
+    }
+
+    template<typename T, typename D> // // if DirectDataCallback is true
+    typename std::enable_if<!T::value && D::value, void>::type
+    processBuffer(typename BufferPoolType::BufferPtrType buffer)
+    {
+        if(LIKELY(_dataCallback))
+        {
+            _dataCallback(buffer);
+        }
+    }
+
 
     template<typename T> // if T is udp
     typename std::enable_if<std::is_same<T, boost::asio::ip::udp>::value, void>::type
@@ -298,7 +328,7 @@ private:
             auto buffer = _bufferFactory.create();
 
             _socket.async_receive_from(boost::asio::buffer(buffer->buffer(), buffer->capacity()), _lastEndpoint,
-                    boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleRead,
+                    boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO, DirectDataCallback>::handleRead,
                                 this,
                                 boost::asio::placeholders::error,
                                 boost::asio::placeholders::bytes_transferred,
@@ -316,7 +346,7 @@ private:
             auto buffer = _bufferFactory.create();
 
             _socket.async_receive(boost::asio::buffer(buffer->buffer(), buffer->capacity()),
-                    boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleRead,
+                    boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO, DirectDataCallback>::handleRead,
                                 this,
                                 boost::asio::placeholders::error,
                                 boost::asio::placeholders::bytes_transferred,
@@ -329,7 +359,7 @@ private:
     asyncWrite(typename BufferPoolType::BufferPtrType buffer)
     {
         _socket.async_send_to(boost::asio::buffer(buffer->buffer(), buffer->size()), _lastEndpoint,
-                _writeStrand.wrap(boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, buffer, boost::asio::placeholders::error)));
+                _writeStrand.wrap(boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO, DirectDataCallback>::handleWrite, this, buffer, boost::asio::placeholders::error)));
     }
 
     template<typename T, bool UseStrand> // UseStrand Not UDP
@@ -337,7 +367,7 @@ private:
     asyncWrite(typename BufferPoolType::BufferPtrType buffer)
     {
         _socket.async_send(boost::asio::buffer(buffer->buffer(), buffer->size()),
-                _writeStrand.wrap(boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, buffer, boost::asio::placeholders::error)));
+                _writeStrand.wrap(boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO, DirectDataCallback>::handleWrite, this, buffer, boost::asio::placeholders::error)));
     }
 
     template<typename T, bool UseStrand> // Not UseStrand and UDP
@@ -345,7 +375,7 @@ private:
     asyncWrite(typename BufferPoolType::BufferPtrType buffer)
     {
         _socket.async_send_to(boost::asio::buffer(buffer->buffer(), buffer->size()), _lastEndpoint,
-                boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, buffer, boost::asio::placeholders::error));
+                boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO, DirectDataCallback>::handleWrite, this, buffer, boost::asio::placeholders::error));
     }
 
     template<typename T, bool UseStrand> // Not UseStrand and Not UDP
@@ -353,7 +383,7 @@ private:
     asyncWrite(typename BufferPoolType::BufferPtrType buffer)
     {
         _socket.async_send(boost::asio::buffer(buffer->buffer(), buffer->size()),
-                boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, buffer, boost::asio::placeholders::error));
+                boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO, DirectDataCallback>::handleWrite, this, buffer, boost::asio::placeholders::error));
     }
 
     template<typename T, bool UseStrand> // UseStrand and UDP
@@ -361,7 +391,7 @@ private:
     asyncWrite(const std::string& message)
     {
         _socket.async_send_to(boost::asio::buffer(message.data(), message.size()), _lastEndpoint,
-                _writeStrand.wrap(boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, boost::asio::placeholders::error)));
+                _writeStrand.wrap(boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO, DirectDataCallback>::handleWrite, this, boost::asio::placeholders::error)));
     }
 
     template<typename T, bool UseStrand> // UseStrand and Not UDP
@@ -369,7 +399,7 @@ private:
     asyncWrite(const std::string& message)
     {
         _socket.async_send(boost::asio::buffer(message.data(), message.size()),
-                _writeStrand.wrap(boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, boost::asio::placeholders::error)));
+                _writeStrand.wrap(boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO, DirectDataCallback>::handleWrite, this, boost::asio::placeholders::error)));
     }
 
     template<typename T, bool UseStrand> // Not UseStrand and UDP
@@ -377,7 +407,7 @@ private:
     asyncWrite(const std::string& message)
     {
         _socket.async_send_to(boost::asio::buffer(message.data(), message.size()), _lastEndpoint,
-                boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, boost::asio::placeholders::error));
+                boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO, DirectDataCallback>::handleWrite, this, boost::asio::placeholders::error));
     }
 
     template<typename T, bool UseStrand> // Not UseStrand and Not UDP
@@ -385,7 +415,7 @@ private:
     asyncWrite(const std::string& message)
     {
         _socket.async_send(boost::asio::buffer(message.data(), message.size()),
-                boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO>::handleWrite, this, boost::asio::placeholders::error));
+                boost::bind(&IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO, DirectDataCallback>::handleWrite, this, boost::asio::placeholders::error));
     }
 
     template<typename T> // sync op ignore UseStrand and UDP true

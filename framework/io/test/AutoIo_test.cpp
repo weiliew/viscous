@@ -293,8 +293,8 @@ BOOST_AUTO_TEST_CASE( AutoIo_test_1 )
     typedef InitiatorCallback<InitiatorType, LockFreeFixedBuffer256::BufferPtrType> InitiatorCallbackType;
     InitiatorCallbackType cb1("Initiator1", tcpInitiator1);
     tcpInitiator1.getCallbackSignal().subscribe(&cb1, 100);
-    tcpInitiator1.registerConnectCallback(boost::bind(&InitiatorCallbackType::onConnect, &cb1));
-    tcpInitiator1.registerDisconnectCallback(boost::bind(&InitiatorCallbackType::onDisconnect, &cb1));
+    tcpInitiator1.registerConnectCallback(std::bind(&InitiatorCallbackType::onConnect, &cb1));
+    tcpInitiator1.registerDisconnectCallback(std::bind(&InitiatorCallbackType::onDisconnect, &cb1));
     BOOST_CHECK(tcpInitiator1.start("127.0.0.1", acceptorPort1));
     std::thread initiatorThread1([&tcpInitiator1](){tcpInitiator1.getIO().run();});
     initiatorThread1.detach();
@@ -302,8 +302,8 @@ BOOST_AUTO_TEST_CASE( AutoIo_test_1 )
     InitiatorType tcpInitiator2(myLogger);
     InitiatorCallbackType cb2("Initiator2", tcpInitiator2);
     tcpInitiator2.getCallbackSignal().subscribe(&cb2, 100);
-    tcpInitiator2.registerConnectCallback(boost::bind(&InitiatorCallbackType::onConnect, &cb2));
-    tcpInitiator2.registerDisconnectCallback(boost::bind(&InitiatorCallbackType::onDisconnect, &cb2));
+    tcpInitiator2.registerConnectCallback(std::bind(&InitiatorCallbackType::onConnect, &cb2));
+    tcpInitiator2.registerDisconnectCallback(std::bind(&InitiatorCallbackType::onDisconnect, &cb2));
     BOOST_CHECK(tcpInitiator2.start("127.0.0.1", acceptorPort2));
 
     std::thread initiatorThread2([&tcpInitiator2](){tcpInitiator2.getIO().run();});

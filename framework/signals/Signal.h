@@ -16,14 +16,23 @@
 #include "SignalBase.h"
 #include "Subscription.h"
 
+// TODO - Replace Signal and StaticSignal with co-routine implementation for flexibility and speed
+
 namespace vf_common
 {
+
+// TODO - might not need the PayloadType template - see StaticSignal
 
 template<typename PayloadType>
 class Signal : public SignalBase
 {
 public:
-    typedef PayloadType ElementType;
+    struct Traits
+    {
+        typedef std::true_type DynamicSignal;
+    };
+
+    typedef PayloadType element_type;
 
     Signal(const char * name, boost::asio::io_service& ioService)
     : SignalBase(name, ioService)
@@ -106,7 +115,12 @@ template<typename PayloadType>
 class Signal<PayloadType *> : public SignalBase
 {
 public:
-    typedef PayloadType *  ElementType;
+    struct Traits
+    {
+        typedef std::true_type DynamicSignal;
+    };
+
+    typedef PayloadType *  element_type;
 
     Signal(const char * name, boost::asio::io_service& ioService)
     : SignalBase(name, ioService)

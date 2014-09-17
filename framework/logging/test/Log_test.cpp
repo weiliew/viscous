@@ -96,15 +96,15 @@ BOOST_AUTO_TEST_CASE( Log_Test_2 )
         StdoutSink stdoutSink;
         stdoutSink.open();
 
-        std::shared_ptr<boost::thread> logThread1 = std::make_shared<boost::thread>(boost::bind(&testLogSink<StdoutSink>, boost::ref(stdoutSink)));
-        std::shared_ptr<boost::thread> logThread2 = std::make_shared<boost::thread>(boost::bind(&testLogSink<StdoutSink>, boost::ref(stdoutSink)));
-        std::shared_ptr<boost::thread> logThread3 = std::make_shared<boost::thread>(boost::bind(&testLogSink<StdoutSink>, boost::ref(stdoutSink)));
-        std::shared_ptr<boost::thread> logThread4 = std::make_shared<boost::thread>(boost::bind(&testLogSink<StdoutSink>, boost::ref(stdoutSink)));
-        std::shared_ptr<boost::thread> logThread5 = std::make_shared<boost::thread>(boost::bind(&testLogSink<StdoutSink>, boost::ref(stdoutSink)));
-        std::shared_ptr<boost::thread> logThread6 = std::make_shared<boost::thread>(boost::bind(&testLogSink<StdoutSink>, boost::ref(stdoutSink)));
-        std::shared_ptr<boost::thread> logThread7 = std::make_shared<boost::thread>(boost::bind(&testLogSink<StdoutSink>, boost::ref(stdoutSink)));
-        std::shared_ptr<boost::thread> logThread8 = std::make_shared<boost::thread>(boost::bind(&testLogSink<StdoutSink>, boost::ref(stdoutSink)));
-        std::shared_ptr<boost::thread> logThread9 = std::make_shared<boost::thread>(boost::bind(&testLogSink<StdoutSink>, boost::ref(stdoutSink)));
+        std::shared_ptr<boost::thread> logThread1 = std::make_shared<boost::thread>(std::bind(&testLogSink<StdoutSink>, boost::ref(stdoutSink)));
+        std::shared_ptr<boost::thread> logThread2 = std::make_shared<boost::thread>(std::bind(&testLogSink<StdoutSink>, boost::ref(stdoutSink)));
+        std::shared_ptr<boost::thread> logThread3 = std::make_shared<boost::thread>(std::bind(&testLogSink<StdoutSink>, boost::ref(stdoutSink)));
+        std::shared_ptr<boost::thread> logThread4 = std::make_shared<boost::thread>(std::bind(&testLogSink<StdoutSink>, boost::ref(stdoutSink)));
+        std::shared_ptr<boost::thread> logThread5 = std::make_shared<boost::thread>(std::bind(&testLogSink<StdoutSink>, boost::ref(stdoutSink)));
+        std::shared_ptr<boost::thread> logThread6 = std::make_shared<boost::thread>(std::bind(&testLogSink<StdoutSink>, boost::ref(stdoutSink)));
+        std::shared_ptr<boost::thread> logThread7 = std::make_shared<boost::thread>(std::bind(&testLogSink<StdoutSink>, boost::ref(stdoutSink)));
+        std::shared_ptr<boost::thread> logThread8 = std::make_shared<boost::thread>(std::bind(&testLogSink<StdoutSink>, boost::ref(stdoutSink)));
+        std::shared_ptr<boost::thread> logThread9 = std::make_shared<boost::thread>(std::bind(&testLogSink<StdoutSink>, boost::ref(stdoutSink)));
         sleep(5);
         stdoutSink.close();
     }
@@ -112,15 +112,15 @@ BOOST_AUTO_TEST_CASE( Log_Test_2 )
     {
         FileSink fileSink("Log_test.out");
         fileSink.open();
-        std::shared_ptr<boost::thread> logThread1 = std::make_shared<boost::thread>(boost::bind(&testLogSink<FileSink>, boost::ref(fileSink)));
-        std::shared_ptr<boost::thread> logThread2 = std::make_shared<boost::thread>(boost::bind(&testLogSink<FileSink>, boost::ref(fileSink)));
-        std::shared_ptr<boost::thread> logThread3 = std::make_shared<boost::thread>(boost::bind(&testLogSink<FileSink>, boost::ref(fileSink)));
-        std::shared_ptr<boost::thread> logThread4 = std::make_shared<boost::thread>(boost::bind(&testLogSink<FileSink>, boost::ref(fileSink)));
-        std::shared_ptr<boost::thread> logThread5 = std::make_shared<boost::thread>(boost::bind(&testLogSink<FileSink>, boost::ref(fileSink)));
-        std::shared_ptr<boost::thread> logThread6 = std::make_shared<boost::thread>(boost::bind(&testLogSink<FileSink>, boost::ref(fileSink)));
-        std::shared_ptr<boost::thread> logThread7 = std::make_shared<boost::thread>(boost::bind(&testLogSink<FileSink>, boost::ref(fileSink)));
-        std::shared_ptr<boost::thread> logThread8 = std::make_shared<boost::thread>(boost::bind(&testLogSink<FileSink>, boost::ref(fileSink)));
-        std::shared_ptr<boost::thread> logThread9 = std::make_shared<boost::thread>(boost::bind(&testLogSink<FileSink>, boost::ref(fileSink)));
+        std::shared_ptr<boost::thread> logThread1 = std::make_shared<boost::thread>(std::bind(&testLogSink<FileSink>, boost::ref(fileSink)));
+        std::shared_ptr<boost::thread> logThread2 = std::make_shared<boost::thread>(std::bind(&testLogSink<FileSink>, boost::ref(fileSink)));
+        std::shared_ptr<boost::thread> logThread3 = std::make_shared<boost::thread>(std::bind(&testLogSink<FileSink>, boost::ref(fileSink)));
+        std::shared_ptr<boost::thread> logThread4 = std::make_shared<boost::thread>(std::bind(&testLogSink<FileSink>, boost::ref(fileSink)));
+        std::shared_ptr<boost::thread> logThread5 = std::make_shared<boost::thread>(std::bind(&testLogSink<FileSink>, boost::ref(fileSink)));
+        std::shared_ptr<boost::thread> logThread6 = std::make_shared<boost::thread>(std::bind(&testLogSink<FileSink>, boost::ref(fileSink)));
+        std::shared_ptr<boost::thread> logThread7 = std::make_shared<boost::thread>(std::bind(&testLogSink<FileSink>, boost::ref(fileSink)));
+        std::shared_ptr<boost::thread> logThread8 = std::make_shared<boost::thread>(std::bind(&testLogSink<FileSink>, boost::ref(fileSink)));
+        std::shared_ptr<boost::thread> logThread9 = std::make_shared<boost::thread>(std::bind(&testLogSink<FileSink>, boost::ref(fileSink)));
 
         sleep(5);
         fileSink.close();

@@ -70,6 +70,7 @@ namespace fix_defs
 namespace fieldNames
 {</xsl:text>
 <xsl:for-each select="field">
+    StringConstant <xsl:value-of select="@name"/>_FID_STR("<xsl:value-of select="@number"/>=");
     StringConstant <xsl:value-of select="@name"/>("<xsl:value-of select="@name"/>");</xsl:for-each>
 <xsl:text disable-output-escaping="yes">
 } // fields
@@ -113,7 +114,7 @@ namespace fields
 <xsl:text disable-output-escaping="yes">
     template&#60;typename Required = std::false_type, typename Validate = std::false_type&#62;</xsl:text>
     using SFIXField_<xsl:value-of select="@name"/><xsl:text disable-output-escaping="yes"> = SFIXField&#60;</xsl:text>
-        <xsl:value-of select="@number"/>, fieldNames::<xsl:value-of select="@name"/>, fieldTypes::<xsl:value-of select="@type"/>,<xsl:choose>
+        <xsl:value-of select="@number"/>, fieldNames::<xsl:value-of select="@name"/>_FID_STR, fieldNames::<xsl:value-of select="@name"/>, fieldTypes::<xsl:value-of select="@type"/>,<xsl:choose>
 <xsl:when test="value"> arrays::StrArrEnum_<xsl:value-of select="@number"/>, arrays::StrArrDesc_<xsl:value-of select="@number"/>,</xsl:when>
 <xsl:otherwise> arrays::EmptyArray, arrays::EmptyArray, </xsl:otherwise>
 </xsl:choose><xsl:text disable-output-escaping="yes"> Required, Validate&#62;;

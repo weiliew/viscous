@@ -6,4 +6,4 @@
  #  (See http://www.boost.org/LICENSE_1_0.txt)
  
 set (INCLUDE_TEST_LIBS )
-PROCESS_TEST_DIR(message)
+PROCESS_TEST_DIR(io)
