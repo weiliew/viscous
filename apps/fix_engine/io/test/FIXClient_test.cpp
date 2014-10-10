@@ -28,6 +28,8 @@ BOOST_AUTO_TEST_CASE( FIXClient_test_1 )
     BOOST_TEST_MESSAGE("Running test case FIXClient_test_1");
 
     FIXClient<DefaultFIXTraits> client1;
+    client1.addEndpoint(boost::unit_test::framework::master_test_suite().argv[1], boost::unit_test::framework::master_test_suite().argv[2]);
+    client1.run();
 
 }
 

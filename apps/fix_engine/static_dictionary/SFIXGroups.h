@@ -39,6 +39,7 @@ public:
     constexpr static bool                  IS_REQUIRED = Required::value;
     constexpr static bool                  VALIDATE    = Validate::value;
     constexpr static unsigned int          CAPACITY    = Capacity;
+    constexpr static size_t                VEC_CAPACITY = sizeof...(FieldTypes)*3*CAPACITY;
 
     constexpr static FIXField::FieldType type()
     {
@@ -178,6 +179,17 @@ public:
         return toStringUnwind(os, typename gens<sizeof...(FieldTypes)>::type());
     }
 
+    // sets the iovec structure passed in
+    bool setIoVec(iovec*& vec)
+    {
+        return setIoVecUnwind(vec, typename gens<sizeof...(FieldTypes)>::type());
+    }
+
+    bool setOutputBuffer(char *& buffer, int& remLen)
+    {
+        return setOutputBufferUnwind(buffer, remLen, typename gens<sizeof...(FieldTypes)>::type());
+    }
+
 private:
     template<bool T>
     typename std::enable_if<T, bool>::type validate()
@@ -188,6 +200,90 @@ private:
     template<bool T>
     typename std::enable_if<!T, bool>::type validate()
     {
+        return true;
+    }
+
+    // setIoVec
+    template<int ...S>
+    bool setIoVecUnwind(iovec*& vec, seq<S...>)
+    {
+        for(int index=0;index<_numRepeating;++index)
+        {
+            if(!setIoVec(vec, std::get<S>(_fieldList[index]) ...))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    template<typename FieldType, typename... FieldTypeList>
+    bool setIoVec(iovec*& vec, FieldType& field, FieldTypeList&... fieldList)
+    {
+        if(field.isSet())
+        {
+            if(!field.setIoVec(vec))
+            {
+                return false;
+            }
+        }
+        return setIoVec(vec, fieldList...);
+    }
+
+    template<typename FieldType>
+    bool setIoVec(iovec*& vec, FieldType& field)
+    {
+        if(field.isSet())
+        {
+            if(!field.setIoVec(vec))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // setOutputBuffer
+    template<int ...S>
+    bool setOutputBufferUnwind(char *& buffer, int& remLen, seq<S...>)
+    {
+        for(int index=0;index<_numRepeating;++index)
+        {
+            if(!setOutputBuffer(buffer, remLen, std::get<S>(_fieldList[index]) ...))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    template<typename FieldType, typename... FieldTypeList>
+    bool setOutputBuffer(char *& buffer, int& remLen, FieldType& field, FieldTypeList&... fieldList)
+    {
+        if(field.isSet())
+        {
+            if(!field.setOutputBuffer(buffer, remLen))
+            {
+                return false;
+            }
+        }
+        return setOutputBuffer(buffer, remLen, fieldList...);
+    }
+
+    template<typename FieldType>
+    bool setOutputBuffer(char *& buffer, int& remLen, FieldType& field)
+    {
+        if(field.isSet())
+        {
+            if(!field.setOutputBuffer(buffer, remLen))
+            {
+                return false;
+            }
+        }
+
         return true;
     }
 

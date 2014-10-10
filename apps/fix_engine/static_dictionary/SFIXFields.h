@@ -44,6 +44,7 @@ public:
     constexpr static bool                  IS_GROUP    = false;
     constexpr static bool                  IS_REQUIRED = Required::value;
     constexpr static bool                  VALIDATE    = Validate::value;
+    constexpr static StringConstant        TRAILER     = StringConstant("\001\000");
 
     constexpr static FIXField::FieldType type()
     {
@@ -139,6 +140,84 @@ public:
             os << FidStr << (_value.value() ? _value.value() : "0") << "|";
         }
         return os;
+    }
+
+    // TODO - need to optimise this function
+    // write to the buffer passed in with a well formed fix field in the form of
+    // <fix>=<val><SOH><NULL>
+    bool getFIXStr(char * buffer, size_t size)
+    {
+        if(!buffer || !size || _value.empty())
+        {
+            return false;
+        }
+
+        int remainingLen = size;
+        int len = strncpy(buffer, FID_STR, remainingLen);
+        remainingLen -= len;
+        buffer += len;
+        if(remainingLen <= 0)
+        {
+            return false;
+        }
+        len = strncpy(buffer, _value.value(), remainingLen);
+        remainingLen -= len;
+        if(remainingLen <= 0)
+        {
+            return false;
+        }
+        buffer[len] = SOH;
+        buffer[len+1] = '\0'; // good will
+
+        return true;
+    }
+
+    // sets the pointer to the fix string into the iovec structure
+    // the iovec structure passed in must be at least 3 vector wide
+    bool setIoVec(iovec*& vec)
+    {
+        if(UNLIKELY((_value.empty() || !vec || !(vec+1) || !(vec+2))))
+        {
+            return false;
+        }
+
+        vec->iov_base = (void *) FID_STR.data();
+        vec->iov_len = FID_STR.size();
+        ++vec;
+
+        vec->iov_base = (void *) _value.value();
+        vec->iov_len = _value.size();
+        ++vec;
+
+        vec->iov_base = (void *) TRAILER.data();
+        vec->iov_len = TRAILER.size();
+        ++vec;
+
+        return true;
+    }
+
+    bool setOutputBuffer(char *& buffer, int& remLen)
+    {
+        if(UNLIKELY((_value.empty())))
+        {
+            return false;
+        }
+
+        int lenRequired = FID_STR.size() + TRAILER.size() + _value.size();
+        if(remLen < lenRequired)
+        {
+            return false;
+        }
+
+        // memcpy
+        memcpy(buffer, FID_STR.data(), FID_STR.size());
+        buffer += FID_STR.size();
+        memcpy(buffer, _value.value(), _value.size());
+        buffer += _value.size();
+        memcpy(buffer, TRAILER.data(), TRAILER.size());
+        buffer += TRAILER.size();
+
+        return true;
     }
 
 private:
@@ -246,6 +325,9 @@ constexpr StringConstantArr SFIXField<Fid, FidStr, Name, FieldTypeStr, EnumVal, 
 
 template<int Fid, const StringConstant& FidStr, const StringConstant& Name, const StringConstant& FieldTypeStr, const StringConstantArr& EnumVal, const StringConstantArr& DescVal, typename Required, typename Validate>
 constexpr StringConstantArr SFIXField<Fid, FidStr, Name, FieldTypeStr, EnumVal, DescVal, Required, Validate>::DESC_VAL;
+
+template<int Fid, const StringConstant& FidStr, const StringConstant& Name, const StringConstant& FieldTypeStr, const StringConstantArr& EnumVal, const StringConstantArr& DescVal, typename Required, typename Validate>
+constexpr StringConstant SFIXField<Fid, FidStr, Name, FieldTypeStr, EnumVal, DescVal, Required, Validate>::TRAILER;
 
 }  // namespace vf_fix
 

@@ -13,6 +13,9 @@
 #ifndef SFIXMESSAGES_H_
 #define SFIXMESSAGES_H_
 
+#include <sys/uio.h>
+#include "boost/asio.hpp"
+
 namespace vf_fix
 {
 
@@ -28,6 +31,8 @@ public:
     constexpr static StringConstant        NAME        = Name;
     constexpr static StringConstant        TYPE        = Type;
     constexpr static bool                  VALIDATE    = Validate::value;
+    constexpr static size_t                VEC_CAPACITY = sizeof...(FieldTypes)*3 + HeaderType::VEC_CAPACITY + TrailerType::VEC_CAPACITY;
+    constexpr static size_t                OUTPUT_STR_CAPACITY = VEC_CAPACITY*24; // TODO - might want to make this a template var
 
     SFIXMessage()
     {
@@ -135,6 +140,60 @@ public:
         clearUnwind();
     }
 
+    // generates and returns a vector of char arrays for fields contained in this message
+    const iovec* generateFIXStringVec(size_t& countVec, bool force = false)
+    {
+        // check if this has been generated before
+        if(!_vecGenerated || force)
+        {
+            iovec* vec = &_ioVec[0];
+
+            _vecGenerated =
+                _header.setIoVec(vec) &&
+                setIoVec(vec)         &&
+                _trailer.setIoVec(vec);
+
+            if(_vecGenerated)
+            {
+                // set end of vec
+                vec->iov_base = NULL;
+                vec->iov_len = 0;
+                _countVec = (vec - &_ioVec[0])/sizeof(iovec);
+                ++vec;
+                return _ioVec;
+            }
+            else
+            {
+                return NULL;
+            }
+        }
+
+        countVec = _countVec;
+        return _ioVec;
+    }
+
+    boost::asio::const_buffer getBufferOutput(bool force = false)
+    {
+        if(!_strGenerated)
+        {
+            int remLen = OUTPUT_STR_CAPACITY;
+            char * buffer = &_outputStr[0];
+            _strGenerated = _header.setOutputBuffer(buffer, remLen) &&
+                    setOutputBuffer(buffer, remLen) &&
+                    _trailer.setOutputBuffer(buffer, remLen);
+            if(_strGenerated)
+            {
+                _outputStrLen = OUTPUT_STR_CAPACITY - remLen;
+            }
+            else
+            {
+                return boost::asio::const_buffer();
+            }
+        }
+
+        return boost::asio::const_buffer(&_outputStr[0], _outputStrLen);
+    }
+
 private:
     template<bool T>
     typename std::enable_if<T, bool>::type validate(bool msgComplete)
@@ -151,6 +210,75 @@ private:
     typename std::enable_if<!T, bool>::type validate(bool msgComplete)
     {
         return msgComplete;
+    }
+
+    // setOutputBuffer
+    bool setOutputBuffer(char *& buffer, int& remLen)
+    {
+        return setOutputBufferUnwind(buffer, remLen, typename gens<sizeof...(FieldTypes)>::type());
+    }
+
+    template<int ...S>
+    bool setOutputBufferUnwind(char *& buffer, int& remLen, seq<S...>)
+    {
+        return setOutputBuffer(buffer, remLen, std::get<S>(_fieldList) ...);
+    }
+
+    template<typename FieldType, typename... FieldTypeList>
+    bool setOutputBuffer(char *& buffer, int& remLen, FieldType& field, FieldTypeList&... fieldList)
+    {
+        if(field.isSet())
+        {
+            if(!field.setOutputBuffer(buffer, remLen))
+            {
+                return false;
+            }
+        }
+        return setOutputBuffer(buffer, remLen, fieldList...);
+    }
+
+    template<typename FieldType>
+    bool setOutputBuffer(char *& buffer, int& remLen, FieldType& field)
+    {
+        if(field.isSet())
+        {
+            if(!field.setOutputBuffer(buffer, remLen))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // setIoVec
+    // sets the iovec structure passed in
+    bool setIoVec(iovec*& vec)
+    {
+        return setIoVecUnwind(vec, typename gens<sizeof...(FieldTypes)>::type());
+    }
+
+    template<int ...S>
+    bool setIoVecUnwind(iovec*& vec, seq<S...>)
+    {
+        return setIoVec(vec, std::get<S>(_fieldList) ...);
+    }
+
+    template<typename FieldType, typename... FieldTypeList>
+    bool setIoVec(iovec*& vec, FieldType& field, FieldTypeList&... fieldList)
+    {
+        if(!field.setIoVec(vec))
+        {
+            return false;
+        }
+
+        return setIoVec(vec, fieldList...);
+    }
+
+    template<typename FieldType>
+    bool setIoVec(iovec*& vec, FieldType& field)
+    {
+        return field.setIoVec(vec);
     }
 
     // setSubField
@@ -398,6 +526,14 @@ private:
     HeaderType                  _header;
     TrailerType                 _trailer;
     std::tuple<FieldTypes...>   _fieldList;
+
+    bool                        _strGenerated = false;
+    char                        _outputStr[OUTPUT_STR_CAPACITY];
+    size_t                      _outputStrLen = 0;
+
+    bool                        _vecGenerated = false;
+    size_t                      _countVec = 0;
+    iovec                       _ioVec[VEC_CAPACITY]{};
 };
 
 template<const StringConstant& Name, const StringConstant& Type, typename Validate, typename HeaderType, typename TrailerType, typename... FieldTypes>
@@ -408,6 +544,12 @@ constexpr StringConstant SFIXMessage<Name, Type, Validate, HeaderType, TrailerTy
 
 template<const StringConstant& Name, const StringConstant& Type, typename Validate, typename HeaderType, typename TrailerType, typename... FieldTypes>
 constexpr bool SFIXMessage<Name, Type, Validate, HeaderType, TrailerType, FieldTypes...>::VALIDATE;
+
+template<const StringConstant& Name, const StringConstant& Type, typename Validate, typename HeaderType, typename TrailerType, typename... FieldTypes>
+constexpr size_t SFIXMessage<Name, Type, Validate, HeaderType, TrailerType, FieldTypes...>::VEC_CAPACITY;
+
+template<const StringConstant& Name, const StringConstant& Type, typename Validate, typename HeaderType, typename TrailerType, typename... FieldTypes>
+constexpr size_t SFIXMessage<Name, Type, Validate, HeaderType, TrailerType, FieldTypes...>::OUTPUT_STR_CAPACITY;
 
 }  // namespace vf_fix
 

@@ -55,26 +55,20 @@ public:
     void onDisconnect()
     {
         // do we have a list of backup end points ? if so, set the backup end point and trigger reconnect timer
+        ++_currPos;
         if(_currPos < _endPoints.size())
         {
-            size_t lastPos = _currPos;
-            ++_currPos;
-            while(!BaseType::setHostPort(_endPoints[_currPos]._host, _endPoints[_currPos]._port))
-            {
-                if(_currPos >= _endPoints.size())
-                {
-                    _currPos = 0;
-                }
-
-                // break out of we have tried setting all end points
-                if(_currPos == lastPos)
-                {
-                    VF_LOG_ERROR(_logger, "Failed to resolve all available endpoint. Unable to re-connect");
-                    BaseType::setReconnect(false); // do not attempt to reconnect
-                    break;
-                }
-                ++_currPos;
-            }
+            BaseType::setHostPort(_endPoints[_currPos]._host, _endPoints[_currPos]._port);
+        }
+        else if(_endPoints.size())
+        {
+            _currPos = 0;
+            BaseType::setHostPort(_endPoints[_currPos]._host, _endPoints[_currPos]._port);
+        }
+        else
+        {
+            // all end points have been removed - stop reconnect
+            BaseType::setReconnect(false); // do not attempt to reconnect
         }
         BaseType::onDisconnect();
     }
@@ -89,9 +83,19 @@ public:
         }
 
         _endPoints.emplace_back(host, port);
+
+        // set the host port on base class
+        if(!_endPoints.empty())
+        {
+            if(_currPos >= _endPoints.size())
+            {
+                _currPos = 0;
+            }
+            BaseType::setHostPort(_endPoints[_currPos]._host, _endPoints[_currPos]._port);
+        }
     }
 
-    void removeEndPoint(const std::string& host, const std::string& port)
+    void removeEndpoint(const std::string& host, const std::string& port)
     {
         std::remove_if(_endPoints.begin(), _endPoints.end(), [&host, &port](const EndPointType& endpoint) -> bool{
             return host == endpoint._host && port == endpoint._port;
@@ -99,7 +103,14 @@ public:
 
         // once we removed an endpoint, re-pont the current endpoint position to 0
         _currPos = 0;
+
+        // set the host port as the first in the vector
+        if(!_endPoints.empty())
+        {
+            BaseType::setHostPort(_endPoints[_currPos]._host, _endPoints[_currPos]._port);
+        }
     }
+
 
 private:
     struct EndPointType
@@ -110,7 +121,7 @@ private:
         {
         }
 
-        bool operator=(const EndPointType& other)
+        bool operator==(const EndPointType& other)
         {
             return _host == other._host && _port == other._port;
         }

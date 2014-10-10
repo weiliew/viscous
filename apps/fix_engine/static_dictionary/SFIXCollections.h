@@ -29,11 +29,12 @@ public:
     SFIXCollection()
     {}
 
-    constexpr static int                   FID         = 0;
-    constexpr static StringConstant        NAME        = StringConstant("header");
-    constexpr static bool                  IS_GROUP    = false;
-    constexpr static bool                  IS_REQUIRED = true;
-    constexpr static bool                  VALIDATE    = Validate::value;
+    constexpr static int                   FID          = 0;
+    constexpr static StringConstant        NAME         = StringConstant("header");
+    constexpr static bool                  IS_GROUP     = false;
+    constexpr static bool                  IS_REQUIRED  = true;
+    constexpr static bool                  VALIDATE     = Validate::value;
+    constexpr static size_t                VEC_CAPACITY = sizeof...(FieldTypes)*3;
 
     template<typename DecoderType>
     bool set(DecoderType& decoder)
@@ -95,6 +96,17 @@ public:
         return toStringUnwind(os, typename gens<sizeof...(FieldTypes)>::type());
     }
 
+    // sets the iovec structure passed in
+    bool setIoVec(iovec*& vec)
+    {
+        return setIoVecUnwind(vec, typename gens<sizeof...(FieldTypes)>::type());
+    }
+
+    bool setOutputBuffer(char *& buffer, int& remLen)
+    {
+        return setOutputBufferUnwind(buffer, remLen, typename gens<sizeof...(FieldTypes)>::type());
+    }
+
 private:
     template<bool T, typename DecoderType>
     typename std::enable_if<T, bool>::type validate(DecoderType& decoder)
@@ -114,6 +126,75 @@ private:
     {
         decoder.reset();
         checkSeqUnwind(decoder, typename gens<sizeof...(FieldTypes)>::type());
+    }
+
+    // setIoVec
+    template<int ...S>
+    bool setIoVecUnwind(iovec*& vec, seq<S...>)
+    {
+        return setIoVec(vec, std::get<S>(_fieldList) ...);
+    }
+
+
+    template<typename FieldType, typename... FieldTypeList>
+    bool setIoVec(iovec*& vec, FieldType& field, FieldTypeList&... fieldList)
+    {
+        if(field.isSet())
+        {
+            if(!field.setIoVec(vec))
+            {
+                return false;
+            }
+        }
+        return setIoVec(vec, fieldList...);
+    }
+
+    template<typename FieldType>
+    bool setIoVec(iovec*& vec, FieldType& field)
+    {
+        if(field.isSet())
+        {
+            if(!field.setIoVec(vec))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // setOutputBuffer
+    template<int ...S>
+    bool setOutputBufferUnwind(char *& buffer, int& remLen, seq<S...>)
+    {
+        return setOutputBuffer(buffer, remLen, std::get<S>(_fieldList) ...);
+    }
+
+    template<typename FieldType, typename... FieldTypeList>
+    bool setOutputBuffer(char *& buffer, int& remLen, FieldType& field, FieldTypeList&... fieldList)
+    {
+        if(field.isSet())
+        {
+            if(!field.setOutputBuffer(buffer, remLen))
+            {
+                return false;
+            }
+        }
+        return setOutputBuffer(buffer, remLen, fieldList...);
+    }
+
+    template<typename FieldType>
+    bool setOutputBuffer(char *& buffer, int& remLen, FieldType& field)
+    {
+        if(field.isSet())
+        {
+            if(!field.setOutputBuffer(buffer, remLen))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     template<typename DecoderType, int ...S>
@@ -383,6 +464,9 @@ constexpr bool SFIXCollection<Validate, FieldTypes...>::IS_REQUIRED;
 
 template<typename Validate, typename... FieldTypes>
 constexpr bool SFIXCollection<Validate, FieldTypes...>::VALIDATE;
+
+template<typename Validate, typename... FieldTypes>
+constexpr size_t SFIXCollection<Validate, FieldTypes...>::VEC_CAPACITY;
 
 } // namespace vf_fix
 

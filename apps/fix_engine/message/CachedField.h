@@ -168,6 +168,22 @@ public:
         _stringVal._cached = false;
     }
 
+    // TODO - not the fastest function - maybe we can set the size when we are parsing the fix message
+    size_t size()
+    {
+        if(!_val)
+        {
+            return 0;
+        }
+
+        if(_stringVal._cached)
+        {
+            return _stringVal._value.size();
+        }
+
+        return strlen(_val);
+    }
+
 private:
     template<typename T>
     void applyToString(T& val)

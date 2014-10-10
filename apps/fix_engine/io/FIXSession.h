@@ -66,8 +66,11 @@ public:
 
     virtual ~FIXSession()
     {
-        // make sure we have logged out
-        logout();
+        // make sure we have logged out (only if we are connected)
+        if(_sessionIo.connected())
+        {
+            logout();
+        }
     }
 
     OutgoingSignalType& getOutgoingSignal()
@@ -80,21 +83,21 @@ public:
         return _sessionIo.getCallbackSignal();
     }
 
-    const std::string& getLogonMsg()
+    bool setLogonMsg()
     {
         // prime the logon message
-        return _derivedImpl.getLogonMsg(_logonMsg);
+        return _derivedImpl.setLogonMsg(_logonMsg);
     }
 
-    const std::string& getLogoutMsg()
+    bool setLogoutMsg()
     {
-        // prime the logon message
-        return _derivedImpl.getLogoutMsg(_logoutMsg);
+        // prime the logout message
+        return _derivedImpl.setLogoutMsg(_logoutMsg);
     }
 
-    const std::string& getHeartbeatMsg()
+    bool setHeartbeatMsg()
     {
-        return _derivedImpl.getHeartbeatMsg(_hbMsg);
+        return _derivedImpl.setHeartbeatMsg(_hbMsg);
     }
 
     // called when a logon message has been received
@@ -105,7 +108,6 @@ public:
     }
 
     // called when a logout message is received
-    // TODO - make this virtual
     void onLogout()
     {
         _derivedImpl.onLogout();
@@ -135,21 +137,30 @@ public:
         _derivedImpl.onDisconnect();
     }
 
-    void addEndpoint(const std::string& host, const std::string& port)
-    {
-        _sessionIo.addEndPoint(host, port);
-    }
-
     void run()
     {
-        _sessionIo.getIO().run();
+        _sessionIo.startConnectTimer();
+    }
+
+    void addEndpoint(const std::string& host, const std::string& port)
+    {
+        _sessionIo.addEndpoint(host, port);
+    }
+
+    void removeEndPoint(const std::string& host, const std::string& port)
+    {
+        _sessionIo.removeEndpoint(host, port);
     }
 
 protected:
     virtual void logon()
     {
-        const std::string& logonMsg = getLogonMsg();
-        if(_sessionIo.syncWrite(logonMsg) != logonMsg.length())
+        if(!setLogonMsg())
+        {
+            return;
+        }
+
+        if(syncSendFIXMsg(_logonMsg))
         {
             VF_LOG_ERROR(_logger, "Failed to send logon message. Disconnecting.");
             _sessionIo.disconnect();
@@ -162,8 +173,12 @@ protected:
 
     virtual void logout(bool reconnect = false)
     {
-        const std::string& logoutMsg = getLogoutMsg();
-        if(_sessionIo.syncWrite(logoutMsg) != logoutMsg.length())
+        if(!setLogoutMsg())
+        {
+            return;
+        }
+
+        if(syncSendFIXMsg(_logoutMsg))
         {
             VF_LOG_WARN(_logger, "Failed to send logout message. Disconnecting with reconnect set to " << (reconnect ? "true" : "false"));
             _sessionIo.disconnect(reconnect);
@@ -177,7 +192,11 @@ protected:
 
     /*virtual*/ void sendHeartBeat()
     {
-        _sessionIo.asyncWrite(getHeartbeatMsg());
+        if(!setHeartbeatMsg())
+        {
+            return;
+        }
+        asyncSendFIXMsg(_hbMsg);
     }
 
 
@@ -200,6 +219,40 @@ protected:
     InitiatorType           _sessionIo;
 
 private:
+    template<typename MsgType>
+    bool syncSendFIXMsg(MsgType& msg)
+    {
+        boost::asio::const_buffer toSend;
+        size_t bufSize = handlePreSend(msg, toSend);
+        if(!bufSize)
+        {
+            return false;
+        }
+
+        return (_sessionIo.syncWrite(toSend) == bufSize);
+    }
+
+    template<typename MsgType>
+    void asyncSendFIXMsg(MsgType& msg)
+    {
+        boost::asio::const_buffer toSend;
+        if(!handlePreSend(msg, toSend))
+        {
+            return false;
+        }
+
+        _sessionIo.asyncWrite(toSend);
+    }
+
+    template<typename MsgType>
+    size_t handlePreSend(MsgType& msg, boost::asio::const_buffer& toSend)
+    {
+        // TODO - checksum, seq num tracking etc
+
+        toSend = msg.getBufferOutput();
+        return boost::asio::detail::buffer_size_helper(toSend);
+    }
+
     DerivedSessionType&     _derivedImpl;
 
     State                   _state;

@@ -70,15 +70,15 @@ namespace fix_defs
 namespace fieldNames
 {</xsl:text>
 <xsl:for-each select="field">
-    StringConstant <xsl:value-of select="@name"/>_FID_STR("<xsl:value-of select="@number"/>=");
-    StringConstant <xsl:value-of select="@name"/>("<xsl:value-of select="@name"/>");</xsl:for-each>
+    extern constexpr StringConstant <xsl:value-of select="@name"/>_FID_STR("<xsl:value-of select="@number"/>=");
+    extern constexpr StringConstant <xsl:value-of select="@name"/>("<xsl:value-of select="@name"/>");</xsl:for-each>
 <xsl:text disable-output-escaping="yes">
 } // fields
 
 namespace fieldTypes
 {</xsl:text>
 <xsl:for-each select="//field[generate-id() = generate-id(key('keyFieldByType', @type)[1])]">
-    StringConstant <xsl:value-of select="@type"/>("<xsl:value-of select="@type"/>");</xsl:for-each>
+    extern constexpr StringConstant <xsl:value-of select="@type"/>("<xsl:value-of select="@type"/>");</xsl:for-each>
 <xsl:text disable-output-escaping="yes">
 } // fieldTypes
 </xsl:text>

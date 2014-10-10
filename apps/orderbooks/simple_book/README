@@ -1,0 +1,22 @@
+Answers to Part A
+1. Book::add(Order)
+2. Book::remove(int)
+3. Book::modify(id, quantity) 
+4. Book::getPrice(level, side)
+5. Book::getSize(level, size)
+6. Book::begin(side) (Not quite sure what is needed here - but the model chosen for this book is not very efficient in obtaining the list of orders at 
+                      a particular price level. Chaanges to the underlying book storage may be needed if thiss function is required in a regular basis)
+
+Part B
+The book implemented mainly focus on storing the full order book by id, it does not work very well if a level book operation is required.
+To move this into production code, the following steps will be necessary
+1. Adapt the book to suit the use case, i.e. fast insert and access using id, or fast price level display (i.e. top 5/10 levels)
+2. Change Order class to take in different types of id (int or string) using templates
+3. Add accesors to Order class
+4. For fast access to the individual orders, it may be better to store additional unordered_map for direct access to the order 
+5. It may be necessary to change the underlying storage from a multiset, to a unordered_map or set, with a deque or list as its value representing the order entries.
+
+Total time taken ~ 2.5 hours implementation, approx 1 hour testing, fixing bugs and writing up this README file.
+
+Compiled using gcc 4.9 with the following cmd line:
+g++ main.cpp -o book -std=c++1y -g

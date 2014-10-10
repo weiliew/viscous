@@ -34,4 +34,7 @@ FIX message performance figures ?
 
 New :
 Refactor code to replace signals with co-routine
-Replace buffer pool + queues with use of unique_ptr as a possible transfer instead of raw ptr type
+
+- Create iovec wrapper that is compatible with asio read/write
+- Fix/change sync and async write in IO.h to be more efficient
+- receiving data in vectorised format (readv)

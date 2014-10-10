@@ -54,14 +54,15 @@ public:
         auto buffer3 = _handle.getBufferFactory().create();
         auto buffer4 = _handle.getBufferFactory().create();
 
-        buffer1->setBuffer("ping sync 1");
+        // TODO - sending and receiving of iovec does not work ccurrently
+        iovec vec1[] = {{(void*)"ping ", 5}, {(void*)"sync ", 5}, {(void*)"1", 1}};
         buffer2->setBuffer("ping sync 2");
-        buffer3->setBuffer("ping async 1");
+        iovec vec3[] = {{(void*)"ping ", 5}, {(void*)"async ", 6}, {(void*)"1", 1}};
         buffer4->setBuffer("ping async 2");
 
         //std::cout << *buffer1;
-        BOOST_TEST_MESSAGE("Sending buffer: " << std::string(buffer1->buffer(), buffer1->size()));
-        _handle.asyncWrite(buffer1);
+        BOOST_TEST_MESSAGE("Sending buffer: " << vec1);
+        _handle.asyncWrite(&vec1[0], sizeof(vec1)/sizeof(iovec));
         usleep(100);
 
         BOOST_TEST_MESSAGE("Sending buffer: " << std::string(buffer2->buffer(), buffer2->size()));
@@ -70,8 +71,8 @@ public:
 
         BOOST_TEST_MESSAGE("Async write test");
 
-        BOOST_TEST_MESSAGE("Sending buffer: " << std::string(buffer3->buffer(), buffer3->size()));
-        _handle.syncWrite(buffer3);
+        BOOST_TEST_MESSAGE("Sending buffer: " << vec3);
+        _handle.syncWrite(&vec3[0], sizeof(vec3)/sizeof(iovec));
         usleep(100);
 
         BOOST_TEST_MESSAGE("Sending buffer: " << std::string(buffer4->buffer(), buffer4->size()));

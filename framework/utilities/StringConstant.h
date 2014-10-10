@@ -46,6 +46,11 @@ public:
         return _data;
     }
 
+    constexpr const char * data()
+    {
+        return _data;
+    }
+
 private:
     const char* const _data;
     const std::size_t _size;

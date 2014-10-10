@@ -102,26 +102,55 @@ public:
     {
     }
 
-    const std::string& getLogonMsg(LogonMsgType& msg)
+    bool setLogonMsg(LogonMsgType& msg)
     {
-        // TODO
-        return std::string();
+        setupFIXMsg(msg);
+
+        return true;
     }
 
-    const std::string& getLogoutMsg(LogoutMsgType& msg)
+    bool setLogoutMsg(LogoutMsgType& msg)
     {
-        // TODO
-        return std::string();
+        setupFIXMsg(msg);
+
+        return true;
     }
 
-    const std::string& getHeartbeatMsg(HeartbeatMsgType& msg)
+    bool setHeartbeatMsg(HeartbeatMsgType& msg)
     {
-        // TODO
-        return std::string();
+        setupFIXMsg(msg);
+
+        return true;
     }
 
+    void onLogon()
+    {
+    }
+
+    void onLogout()
+    {
+    }
+
+    void onHeartBeat()
+    {
+    }
+
+    void onConnect()
+    {
+    }
+
+    void onDisconnect()
+    {
+    }
 
 private:
+    template<typename MsgType>
+    void setupFIXMsg(MsgType& msg)
+    {
+        // TODO - set up comp ids etc
+
+    }
+
 };
 
 
