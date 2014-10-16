@@ -10,7 +10,7 @@
  *
  */
 
-#define BOOST_TEST_MODULE Io_test
+#define BOOST_TEST_MODULE FIXClient_test
 #include <boost/test/included/unit_test.hpp>
 #include <sys/syscall.h>
 #include <stdio.h>
@@ -27,7 +27,7 @@ BOOST_AUTO_TEST_CASE( FIXClient_test_1 )
 {
     BOOST_TEST_MESSAGE("Running test case FIXClient_test_1");
 
-    FIXClient<DefaultFIXTraits> client1;
+    FIXClient<DefaultFIXInitiatorTraits> client1;
     client1.addEndpoint(boost::unit_test::framework::master_test_suite().argv[1], boost::unit_test::framework::master_test_suite().argv[2]);
     client1.run();
 

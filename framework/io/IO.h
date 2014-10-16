@@ -194,6 +194,11 @@ public:
         _dataCallback = func;
     }
 
+    const Logger& logger()
+    {
+        return _logger;
+    }
+
 protected:
     /*virtual*/ void handleIoError(const boost::system::error_code& error)
     {

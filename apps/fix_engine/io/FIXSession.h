@@ -30,7 +30,7 @@ public:
     typedef typename FIXTraitsType::MsgBuilderType                      MsgBuilderType;
     typedef typename FIXTraitsType::OutgoingSignalType                  OutgoingSignalType;
     typedef typename FIXTraitsType::IncomingSignalType                  IncomingSignalType;
-    typedef typename FIXTraitsType::InitiatorType                       InitiatorType;
+    typedef typename FIXTraitsType::SessionIoType                       SessionIoType;
     typedef typename FIXTraitsType::TapperType                          TapperType;
     typedef typename FIXTraitsType::LogSinkType                         LogSinkType;
     typedef typename FIXTraitsType::LoggerType                          LoggerType;
@@ -62,6 +62,13 @@ public:
         // register callbacks
         _sessionIo.registerConnectCallback(std::bind(&FIXSession<DerivedSessionType, FIXTraitsType>::onConnect, this));
         _sessionIo.registerDisconnectCallback(std::bind(&FIXSession<DerivedSessionType, FIXTraitsType>::onDisconnect, this));
+
+        // set up incoming signal
+        getIncomingSignal().subscribe(&_msgBuilder, 20);
+        getIncomingSignal().subscribe(&_tapper, 10);
+
+        // set up outgoing signal
+        getOutgoingSignal().subscribe(this, 10);
     }
 
     virtual ~FIXSession()
@@ -216,7 +223,7 @@ protected:
 
     LogSinkType             _logSink;
     LoggerType              _logger;
-    InitiatorType           _sessionIo;
+    SessionIoType           _sessionIo;
 
 private:
     template<typename MsgType>

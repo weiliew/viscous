@@ -16,8 +16,6 @@
 #include <sys/syscall.h>
 #include <stdio.h>
 #include "io/TcpInitiator.h"
-#include "signals/Signal.h"
-#include "utilities/Utilities.h"
 
 using namespace vf_common;
 
@@ -35,6 +33,7 @@ public:
     typedef TcpInitiator<Logger, BufferPoolType, SignalType, InlineIO>  BaseType;
     typedef BufferPoolType                                              PoolType;
 
+    using BaseType::ProtocolType;
     using BaseType::_logger;
 
     FIXInitiator(Logger& logger)

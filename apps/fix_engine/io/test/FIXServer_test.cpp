@@ -10,6 +10,27 @@
  *
  */
 
+#define BOOST_TEST_MODULE FIXServer_test
+#include <boost/test/included/unit_test.hpp>
+#include <sys/syscall.h>
+#include <stdio.h>
+#include <thread>
+
+#include "apps/fix_engine/message/FIXMessageDecoder.h"
+#include "apps/fix_engine/static_dictionary/gen/FieldDefsGen44.h"
+#include "apps/fix_engine/io/FIXServer.h"
+
+using namespace vf_common;
+using namespace vf_fix;
+
+BOOST_AUTO_TEST_CASE( FIXServer_test_1 )
+{
+    BOOST_TEST_MESSAGE("Running test case FIXServer_test_1");
+
+    FIXServer<DefaultFIXAcceptorTraits> client1;
+    client1.run(boost::unit_test::framework::master_test_suite().argv[1], boost::unit_test::framework::master_test_suite().argv[2]);
+}
+
 
 
 

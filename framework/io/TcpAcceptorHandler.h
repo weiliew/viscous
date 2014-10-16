@@ -18,13 +18,16 @@
 namespace vf_common
 {
 
-template<typename Logger, typename BufferPoolType, typename SignalType, typename InlineIO = std::true_type>
+template<typename AcceptorType>
 class TcpAcceptorHandler : public SecondsTimer
 {
 public:
-    typedef TcpAcceptorHandler<Logger, BufferPoolType, SignalType, InlineIO>        HandlerType;
-    typedef TcpAcceptor<HandlerType, Logger, BufferPoolType, SignalType, InlineIO>  TcpAcceptorType;
-    typedef std::shared_ptr<TcpAcceptorType>                                        TcpAcceptorPtrType;
+    typedef TcpAcceptorHandler<AcceptorType>        HandlerType;
+    typedef std::shared_ptr<AcceptorType>           AcceptorPtrType;
+    typedef typename AcceptorType::LoggerT          Logger;
+    typedef typename AcceptorType::BufferPoolTypeT  BufferPoolType;
+    typedef typename AcceptorType::SignalTypeT      SignalType;
+    typedef typename AcceptorType::InlineIOT        InlineIO;
 
     TcpAcceptorHandler(boost::asio::io_service& io, Logger& logger)
     : SecondsTimer(io)
@@ -67,7 +70,7 @@ public:
         return true;
     }
 
-    Signal<TcpAcceptorPtrType>& newAcceptorSignal()
+    Signal<AcceptorPtrType>& newAcceptorSignal()
     {
         return _newAcceptorSignal;
     }
@@ -96,7 +99,7 @@ private:
         return false;
     }
 
-    void handleAccept(const boost::system::error_code& error, TcpAcceptorPtrType acceptor)
+    void handleAccept(const boost::system::error_code& error, AcceptorPtrType acceptor)
     {
         boost::asio::ip::tcp::endpoint endpoint = acceptor->getSocket().remote_endpoint();
         if (LIKELY(!error))
@@ -116,6 +119,7 @@ private:
             }
 
             _tcpAcceptorMap.insert(std::make_pair(endpoint, acceptor));
+            acceptor->setDisconnectCallback(std::bind(&HandlerType::removeAcceptor, this, std::placeholders::_1));
 
             _newAcceptorSignal.dispatch(acceptor);
             acceptor->onAccept(endpoint);
@@ -132,18 +136,18 @@ private:
         VF_LOG_INFO(_logger, "Listening for incoming client connect on " << endpoint.address().to_string().c_str() << ":" << endpoint.port());
 
         // create a new acceptor
-        auto newAcceptor = std::make_shared<TcpAcceptorType>(_logger, *this);
+        auto newAcceptor = std::make_shared<AcceptorType>(_logger);
         _acceptor->async_accept(newAcceptor->getSocket(), endpoint, boost::bind(&HandlerType::handleAccept,
                 this, boost::asio::placeholders::error, newAcceptor));
     }
 
-    Logger                                                          _logger;
-    std::shared_ptr<boost::asio::ip::tcp::acceptor>                 _acceptor;
-    boost::asio::io_service&                                        _ioService;
-    Signal<TcpAcceptorPtrType>                                      _newAcceptorSignal;
-    boost::mutex                                                    _handlerMutex;
-    std::map<boost::asio::ip::tcp::endpoint, TcpAcceptorPtrType>    _tcpAcceptorMap;
-    std::vector<TcpAcceptorPtrType>                                 _tcpAcceptorCleanUpList;
+    Logger                                                       _logger;
+    std::shared_ptr<boost::asio::ip::tcp::acceptor>              _acceptor;
+    boost::asio::io_service&                                     _ioService;
+    Signal<AcceptorPtrType>                                      _newAcceptorSignal;
+    boost::mutex                                                 _handlerMutex;
+    std::map<boost::asio::ip::tcp::endpoint, AcceptorPtrType>    _tcpAcceptorMap;
+    std::vector<AcceptorPtrType>                                 _tcpAcceptorCleanUpList;
 };
 
 

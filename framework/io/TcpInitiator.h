@@ -23,7 +23,8 @@ template<typename Logger, typename BufferPoolType, typename SignalType, typename
 class TcpInitiator : public IO<Logger, BufferPoolType, SignalType, boost::asio::ip::tcp, InlineIO>
 {
 public:
-    typedef IO<Logger, BufferPoolType, SignalType, boost::asio::ip::tcp, InlineIO> BaseType;
+    typedef boost::asio::ip::tcp                                           ProtocolType;
+    typedef IO<Logger, BufferPoolType, SignalType, ProtocolType, InlineIO> BaseType;
 
     using BaseType::_logger;
     using BaseType::_io;

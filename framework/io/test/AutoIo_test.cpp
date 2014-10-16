@@ -262,10 +262,11 @@ BOOST_AUTO_TEST_CASE( AutoIo_test_1 )
     StdoutSink sink;
     Logger<StdoutSink> myLogger(sink, LogDebug);
 
-    typedef TcpAcceptorHandler<Logger<StdoutSink>, LockFreeFixedBuffer256, Signal<typename LockFreeFixedBuffer256::BufferPtrType>> TcpAcceptorHandlerType;
+    typedef TcpAcceptor<Logger<StdoutSink>, LockFreeFixedBuffer256, Signal<typename LockFreeFixedBuffer256::BufferPtrType>> TcpAcceptorType;
+    typedef TcpAcceptorHandler<TcpAcceptorType> TcpAcceptorHandlerType;
     TcpAcceptorHandlerType tcpAcceptorHandler(io, myLogger);
 
-    NewAcceptorSub<typename TcpAcceptorHandlerType::TcpAcceptorPtrType, typename LockFreeFixedBuffer256::BufferPtrType> acceptorSub;
+    NewAcceptorSub<typename TcpAcceptorHandlerType::AcceptorPtrType, typename TcpAcceptorHandlerType::BufferPoolType::BufferPtrType> acceptorSub;
     tcpAcceptorHandler.newAcceptorSignal().subscribe(&acceptorSub);
 
     BOOST_TEST_MESSAGE("Starting acceptor on port: " << acceptorPort1);
@@ -275,7 +276,7 @@ BOOST_AUTO_TEST_CASE( AutoIo_test_1 )
     thread1->detach();
 
     TcpAcceptorHandlerType tcpAcceptorHandler2(io2, myLogger);
-    NewAcceptorSub<typename TcpAcceptorHandlerType::TcpAcceptorPtrType, typename LockFreeFixedBuffer256::BufferPtrType> acceptorSub2;
+    NewAcceptorSub<typename TcpAcceptorHandlerType::AcceptorPtrType, typename TcpAcceptorHandlerType::BufferPoolType::BufferPtrType> acceptorSub2;
     tcpAcceptorHandler2.newAcceptorSignal().subscribe(&acceptorSub2);
 
     BOOST_TEST_MESSAGE("Starting acceptor on port: " << acceptorPort2);

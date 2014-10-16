@@ -88,10 +88,11 @@ BOOST_AUTO_TEST_CASE( Accept_test_1 )
     StdoutSink sink;
     Logger<StdoutSink> myLogger(sink, LogDebug);
 
-    typedef TcpAcceptorHandler<Logger<StdoutSink>, LockingFixedBuffer1k, Signal<typename LockingFixedBuffer1k::BufferPtrType>> TcpAcceptorHandlerType;
+    typedef TcpAcceptor<Logger<StdoutSink>, LockFreeFixedBuffer256, Signal<typename LockFreeFixedBuffer256::BufferPtrType>> TcpAcceptorType;
+    typedef TcpAcceptorHandler<TcpAcceptorType> TcpAcceptorHandlerType;
     TcpAcceptorHandlerType tcpAcceptorHandler(io, myLogger);
 
-    NewAcceptorSub<typename TcpAcceptorHandlerType::TcpAcceptorPtrType, typename LockingFixedBuffer1k::BufferPtrType> acceptorSub;
+    NewAcceptorSub<typename TcpAcceptorHandlerType::AcceptorPtrType, typename TcpAcceptorHandlerType::BufferPoolType::BufferPtrType> acceptorSub;
     tcpAcceptorHandler.newAcceptorSignal().subscribe(&acceptorSub);
 
     // run a thread for the acceptor io

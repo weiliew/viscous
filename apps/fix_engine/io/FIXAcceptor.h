@@ -16,24 +16,26 @@
 #include <sys/syscall.h>
 #include <stdio.h>
 #include "io/TcpAcceptor.h"
-#include "fix/message/FIXMessage.h"
-#include "signals/Signal.h"
-#include "message/MessageFactory.h"
-#include "utilities/Utilities.h"
-#include "FIXSessionHandler.h"
 
-using namespace osf_common;
+using namespace vf_common;
 
-namespace osf_fix
+namespace vf_fix
 {
 
-template<typename SessionHandlerType>
-class FIXAcceptor : public TcpAcceptor<BasicMessageFactory<FIXMessage>, SignalFactory<Signal<FIXMessage> > >
+template<typename Logger, typename BufferPoolType, typename SignalType, typename InlineIO = std::false_type>
+class FIXAcceptor : public TcpAcceptor<Logger, BufferPoolType, SignalType, InlineIO>
 {
 public:
-    FIXAcceptor(boost::asio::io_service& ioService, Logger& logger, boost::shared_ptr<typename SignalFactory<Signal<FIXMessage> >::ProductType> signal)
-    : TcpAcceptor<BasicMessageFactory<FIXMessage>, SignalFactory<Signal<FIXMessage> > > (ioService, logger, signal)
-    , _sessionHandler (logger)
+    typedef TcpAcceptor<Logger, BufferPoolType, SignalType, InlineIO> BaseType;
+    typedef Logger          LoggerT;
+    typedef BufferPoolType  BufferPoolTypeT;
+    typedef SignalType      SignalTypeT;
+    typedef InlineIO        InlineIOT;
+
+    using BaseType::ProtocolType;
+
+    FIXAcceptor(Logger& logger)
+    : BaseType(logger)
     {
     }
 
@@ -42,20 +44,17 @@ public:
 
     }
 
-    // override to perform session management
-    virtual void processIncoming(boost::shared_ptr<FIXMessage> payload)
+    virtual void disconnect(bool reconnect = true)
     {
-        // parse the payload into a FIX message
-        _sessionHandler.parseFIXMessage(payload);
-
-        //_outgoingSignal->notify(payload);
+        BaseType::disconnect(reconnect);
     }
 
+
+
 private:
-    SessionHandlerType _sessionHandler;
 };
 
-}  // namespace osf_fix
+}  // namespace vf_fix
 
 
 #endif /* FIXACCEPTOR_H_ */

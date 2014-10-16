@@ -1,7 +1,7 @@
 /*
- * FIXClient.h
+ * FIXServerSession.h
  *
- *  Created on: 1 Sep 2014
+ *  Created on: 11 Oct 2014
  *      Author: Wei Liew (wei@onesixeightsolutions.com)
  *
  *  Copyright Wei Liew 2012 - 2014.
@@ -10,38 +10,44 @@
  *
  */
 
-#ifndef FIXCLIENT_H_
-#define FIXCLIENT_H_
+#ifndef FIXSERVERSESSION_H_
+#define FIXSERVERSESSION_H_
 
-#include "FIXTraits.h"
+#include "FIXServer.h"
 #include "FIXSession.h"
-
-#include <type_traits>
 
 using namespace vf_common;
 
 namespace vf_fix
 {
 
-template<typename FIXTraitsType = DefaultFIXInitiatorTraits>
-class FIXClient : public FIXSession<FIXClient<FIXTraitsType>, FIXTraitsType>
+template<typename FIXTraitsType>
+class FIXServerSession : public FIXSession<FIXServerSession<FIXTraitsType>, FIXTraitsType>
 {
 public:
-    typedef FIXSession<FIXClient<FIXTraitsType>, FIXTraitsType> BaseType;
+    typedef typename FIXTraitsType::LoggerType          LoggerT;
+    typedef typename FIXTraitsType::BufferPoolType      BufferPoolTypeT;
+    typedef typename FIXTraitsType::OutgoingSignalType  SignalTypeT;
+    typedef typename FIXTraitsType::InlineIOType        InlineIOT;
+
+    typedef FIXSession<FIXServerSession<FIXTraitsType>, FIXTraitsType> BaseType;
 
     // message type traits
     typedef typename FIXTraitsType::MsgTraitsType::LogonMsgType         LogonMsgType;
     typedef typename FIXTraitsType::MsgTraitsType::LogoutMsgType        LogoutMsgType;
     typedef typename FIXTraitsType::MsgTraitsType::HeartbeatMsgType     HeartbeatMsgType;
 
-    FIXClient()
+    using BaseType::_sessionIo;
+
+    FIXServerSession(typename FIXTraitsType::LoggerType&)
     : BaseType(*this)
     {
     }
 
-    virtual ~FIXClient()
+    ~FIXServerSession()
     {
     }
+
 
     void onAppData(typename FIXTraitsType::BufferPtrType msg)
     {
@@ -88,6 +94,22 @@ public:
     {
     }
 
+    // functions required by the acceptor handler
+    void onAccept(boost::asio::ip::tcp::endpoint endpoint)
+    {
+        _sessionIo.onAccept(endpoint);
+    }
+
+    typename BaseType::SessionIoType::ProtocolType::socket& getSocket()
+    {
+        return _sessionIo.getSocket();
+    }
+
+    void setDisconnectCallback(std::function<void (boost::asio::ip::tcp::endpoint&)> cb)
+    {
+        _sessionIo.setDisconnectCallback(cb);
+    }
+
 private:
     template<typename MsgType>
     void setupFIXMsg(MsgType& msg)
@@ -98,7 +120,6 @@ private:
 
 };
 
+} // vf_fix
 
-} // namespace vf_fix
-
-#endif /* FIXCLIENT_H_ */
+#endif /* FIXSERVERSESSION_H_ */
