@@ -19,6 +19,9 @@
 namespace vf_fix
 {
 
+// TODO - deal with this ?
+constexpr int HeaderReservedCount = 20;
+
 template<const StringConstant&  Name,
          const StringConstant&  Type,
          typename               Validate,
@@ -95,6 +98,12 @@ public:
         return isSubFieldUnwind(fid, typename gens<sizeof...(FieldTypes)>::type());
     }
 
+    template<typename T, typename ToString = std::true_type>
+    bool setSubField(int fid, T& val)
+    {
+        return setSubFieldUnwind<ToString>(fid, val, typename gens<sizeof...(FieldTypes)>::type());
+    }
+
     constexpr bool isHeaderField(int fid)
     {
         return _header.isSubField(fid);
@@ -117,14 +126,14 @@ public:
         return getSubFieldUnwind(fid, retField, typename gens<sizeof...(FieldTypes)>::type());
     }
 
-    bool getHeaderField(int fid, CachedField& retField)
+    HeaderType& header()
     {
-        return _header.getSubField(fid, retField);
+        return _header;
     }
 
-    bool getTrailerField(int fid, CachedField& retField)
+    TrailerType& trailer()
     {
-        return _trailer.getSubField(fid, retField);
+        return _trailer;
     }
 
     template<typename GroupType>
@@ -141,6 +150,7 @@ public:
     }
 
     // generates and returns a vector of char arrays for fields contained in this message
+    /* TODO - not supported yet
     const iovec* generateFIXStringVec(size_t& countVec, bool force = false)
     {
         // check if this has been generated before
@@ -171,13 +181,28 @@ public:
         countVec = _countVec;
         return _ioVec;
     }
+    */
 
     boost::asio::const_buffer getBufferOutput(bool force = false)
     {
+        int startIdx = HeaderReservedCount;
+
         if(!_strGenerated)
         {
-            int remLen = OUTPUT_STR_CAPACITY;
-            char * buffer = &_outputStr[0];
+            int remLen = OUTPUT_STR_CAPACITY - startIdx;
+            char * buffer = &_outputStr[startIdx];
+
+            // add msg type
+            *buffer = '\001';
+            +buffer;
+            --remLen;
+            memcpy(buffer, TYPE.data(), TYPE.size());
+            remLen -= TYPE.size();
+            buffer += TYPE.size();
+            *buffer = '\001';
+            +buffer;
+            --remLen;
+
             _strGenerated = _header.setOutputBuffer(buffer, remLen) &&
                     setOutputBuffer(buffer, remLen) &&
                     _trailer.setOutputBuffer(buffer, remLen);
@@ -187,11 +212,41 @@ public:
             }
             else
             {
+                // nothing in the message - return an empty buffer
                 return boost::asio::const_buffer();
             }
         }
 
-        return boost::asio::const_buffer(&_outputStr[0], _outputStrLen);
+        // prepend field sep
+        _outputStr[startIdx-1] = '\001';
+
+        // now append the begin string and the length
+        if(_outputStrLen < 10)
+        {
+            startIdx -= 2;
+        }
+        else if(_outputStrLen < 100)
+        {
+            startIdx -= 3;
+        }
+        else if(_outputStrLen < 1000)
+        {
+            startIdx -= 4;
+        }
+        else
+        {
+            assert(false); // hmmm really ?
+            return boost::asio::const_buffer();
+        }
+
+        // apply length - TODO - any faster way of doing this ?
+        sprintf(&_outputStr[startIdx], "%d", _outputStrLen);
+        int bufferStartIdx = startIdx - fix_defs::BeginString.size();
+        memcpy(&_outputStr[bufferStartIdx], fix_defs::BeginString.data(), fix_defs::BeginString.size());
+
+        // TODO - checksum !!
+
+        return boost::asio::const_buffer(&_outputStr[bufferStartIdx], _outputStrLen + (HeaderReservedCount - startIdx));
     }
 
 private:
@@ -307,6 +362,41 @@ private:
         {
             // found it
             return field.set(decoder);
+        }
+        else
+        {
+            // not found
+            return false;
+        }
+    }
+
+    template<typename ToString, typename T, int ...S>
+    bool setSubFieldUnwind(int fid, T& val, seq<S...>)
+    {
+        return setSubField<ToString>(fid, val, std::get<S>(_fieldList) ...);
+    }
+
+    template<typename ToString, typename T, typename FieldType, typename... FieldTypeList>
+    bool setSubField(int fid, T& val, FieldType& field, FieldTypeList&... fieldList)
+    {
+        if(fid == field.FID)
+        {
+            // found it
+//            field.template setValue<ToString>(val);
+            return true;
+        }
+
+        return setSubField<ToString>(fid, val, fieldList...);
+    }
+
+    template<typename ToString, typename T, typename FieldType>
+    bool setSubField(int fid, T& val, FieldType& field)
+    {
+        if(fid == field.FID)
+        {
+            // found it
+//            field.template setValue<ToString>(val);
+            return true;
         }
         else
         {
@@ -522,6 +612,7 @@ private:
     {
         return field.clear();
     }
+
 
     HeaderType                  _header;
     TrailerType                 _trailer;

@@ -49,6 +49,7 @@ public:
 
     bool setLogonMsg(LogonMsgType& msg)
     {
+        BaseType::setCommonFields(msg);
         setupFIXMsg(msg);
 
         return true;
@@ -56,6 +57,7 @@ public:
 
     bool setLogoutMsg(LogoutMsgType& msg)
     {
+        BaseType::setCommonFields(msg);
         setupFIXMsg(msg);
 
         return true;
@@ -63,6 +65,7 @@ public:
 
     bool setHeartbeatMsg(HeartbeatMsgType& msg)
     {
+        BaseType::setCommonFields(msg);
         setupFIXMsg(msg);
 
         return true;
@@ -82,20 +85,41 @@ public:
 
     void onConnect()
     {
+        BaseType::logon();
     }
 
     void onDisconnect()
     {
     }
 
+    void run(bool blocking = false)
+    {
+        if(_handlerThread)
+        {
+            return;
+        }
+
+        if(blocking)
+        {
+            BaseType::start();
+        }
+        else
+        {
+            _handlerThread.reset(new std::thread([this](){
+                BaseType::start();
+            }));
+            _handlerThread->detach();
+        }
+    }
+
 private:
     template<typename MsgType>
     void setupFIXMsg(MsgType& msg)
     {
-        // TODO - set up comp ids etc
-
+        // set up any necessary fields here specific to the client
     }
 
+    std::unique_ptr<std::thread>    _handlerThread;
 };
 
 

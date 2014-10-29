@@ -24,12 +24,19 @@
 #define FIELDDEFS_H_
 
 #include "utilities/StringConstant.h"
+
+using namespace vf_common;
+
+namespace vf_fix { namespace fix_defs {
+    extern constexpr StringConstant BeginString("8=FIX.</xsl:text>
+    <xsl:value-of select="@major"/><xsl:text disable-output-escaping="yes">.</xsl:text>
+    <xsl:value-of select="@minor"/><xsl:text disable-output-escaping="yes">\x019=");
+} } // vf_fix::fix_defs
+        
 #include "apps/fix_engine/static_dictionary/SFIXFields.h"
 #include "apps/fix_engine/static_dictionary/SFIXGroups.h"
 #include "apps/fix_engine/static_dictionary/SFIXCollections.h"
 #include "apps/fix_engine/static_dictionary/SFIXMessages.h"
-
-using namespace vf_common;
 
 namespace vf_fix
 {
@@ -167,7 +174,7 @@ namespace messages
     namespace message_type
     {</xsl:text>
 <xsl:for-each select="//message[generate-id() = generate-id(key('keyFieldByMsgType', @msgtype)[1])]">
-        StringConstant msg_<xsl:value-of select="@msgtype"/>("<xsl:value-of select="@msgtype"/>");</xsl:for-each>
+        extern constexpr StringConstant msg_<xsl:value-of select="@msgtype"/>("<xsl:value-of select="@msgtype"/>");</xsl:for-each>
 <xsl:text disable-output-escaping="yes">
     } // message_type
 </xsl:text>
@@ -229,7 +236,7 @@ namespace header
 </xsl:text>
 <xsl:for-each select="*">
 <xsl:choose>
-<xsl:when test="name() = 'field'">            , fields::SFIXField_<xsl:value-of select="@name"/><xsl:text disable-output-escaping="yes">&#60;</xsl:text>
+<xsl:when test="name() = 'field' and @name != 'BeginString' and @name != 'BodyLength' and @name != 'MsgType'">            , fields::SFIXField_<xsl:value-of select="@name"/><xsl:text disable-output-escaping="yes">&#60;</xsl:text>
 <xsl:choose>
 <xsl:when test="@required = 'Y'">std::true_type</xsl:when>
 <xsl:otherwise>std::false_type</xsl:otherwise>

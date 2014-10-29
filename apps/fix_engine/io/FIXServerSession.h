@@ -88,6 +88,8 @@ public:
 
     void onConnect()
     {
+        // server does not initiate the logon - wait for logon
+        // TODO - need to timeout or start idle timer to disconnect client
     }
 
     void onDisconnect()

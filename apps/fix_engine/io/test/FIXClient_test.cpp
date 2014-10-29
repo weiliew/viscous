@@ -29,7 +29,7 @@ BOOST_AUTO_TEST_CASE( FIXClient_test_1 )
 
     FIXClient<DefaultFIXInitiatorTraits> client1;
     client1.addEndpoint(boost::unit_test::framework::master_test_suite().argv[1], boost::unit_test::framework::master_test_suite().argv[2]);
-    client1.run();
+    client1.run(true);
 
 }
 

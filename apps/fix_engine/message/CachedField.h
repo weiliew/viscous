@@ -289,6 +289,8 @@ template<>
 void CachedField::setCachedVal<std::string, std::false_type>(std::string& val)
 {
     _stringVal._value = val;
+    _val = _stringVal._value.c_str();
+    _stringVal._cached = true;
 }
 
 template<>
@@ -314,7 +316,8 @@ template<>
 void CachedField::setCachedVal<bool, std::false_type>(bool& val)
 {
     _boolVal._value = val;
-    _boolVal._cached = true;}
+    _boolVal._cached = true;
+}
 
 template<>
 uint64_t CachedField::getValue<uint64_t>()

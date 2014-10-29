@@ -127,6 +127,12 @@ public:
         return true;
     }
 
+    template<typename ValType>
+    void setValue(ValType&)
+    {
+        // no-op on setValue for a group field type
+    }
+
     bool isSet()
     {
         return _numRepeating>0;

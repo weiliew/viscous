@@ -13,6 +13,8 @@
 #ifndef FIXSESSION_H_
 #define FIXSESSION_H_
 
+#include <type_traits>
+
 using namespace vf_common;
 
 namespace vf_fix
@@ -58,6 +60,8 @@ public:
     , _state(Unknown)
     , _outgoingSignal("FIXSession_out", _sessionIo.getIO())
     , _msgBuilder(_outgoingSignal, _sessionIo.getBufferFactory())
+    , _recvSeqNum(0)
+    , _sendSeqNum(0)
     {
         // register callbacks
         _sessionIo.registerConnectCallback(std::bind(&FIXSession<DerivedSessionType, FIXTraitsType>::onConnect, this));
@@ -129,14 +133,15 @@ public:
     void onData(BufferPtrType& buffer)
     {
         // process data
+        VF_LOG_DEBUG(_logger, "Received FIX message" << std::string(buffer->buffer(), buffer->size()));
 
+        // check fix message and call onAppData if it is an application msg type and onAdminData if it is admin data type
 
     }
 
     void onConnect()
     {
         _derivedImpl.onConnect();
-        logon();
     }
 
     void onDisconnect()
@@ -144,9 +149,10 @@ public:
         _derivedImpl.onDisconnect();
     }
 
-    void run()
+    void start()
     {
         _sessionIo.startConnectTimer();
+        _sessionIo.getIO().run();
     }
 
     void addEndpoint(const std::string& host, const std::string& port)
@@ -167,7 +173,7 @@ protected:
             return;
         }
 
-        if(syncSendFIXMsg(_logonMsg))
+        if(!syncSendFIXMsg(_logonMsg))
         {
             VF_LOG_ERROR(_logger, "Failed to send logon message. Disconnecting.");
             _sessionIo.disconnect();
@@ -206,6 +212,11 @@ protected:
         asyncSendFIXMsg(_hbMsg);
     }
 
+    template<typename MsgType>
+    void setCommonFields(MsgType& msg)
+    {
+        // TODO - Sender and Target Comp ID, SeqNum, Sending Time
+    }
 
     MsgBuilderType& getMsgBuilder()
     {
@@ -252,9 +263,52 @@ private:
     }
 
     template<typename MsgType>
+    typename std::enable_if<MsgType::TYPE == fix_defs::messages::message_type::msg_0, void>::type
+    addSeqNum(MsgType&)
+    {
+    }
+
+    template<typename MsgType>
+    typename std::enable_if<MsgType::TYPE != fix_defs::messages::message_type::msg_0, void>::type
+    addSeqNum(MsgType& msg)
+    {
+        msg.header().setSubField(fix_defs::fields::SFIXField_MsgSeqNum<>::FID, ++_sendSeqNum);
+    }
+
+    template<typename MsgType, typename T = typename fix_defs::fields::SFIXField_CheckSum<>>
+    typename std::enable_if<T::TYPE_NAME == fix_defs::fieldTypes::CHAR, void>::type
+    setDummyCheckSum(MsgType& msg)
+    {
+        msg.trailer().setSubField(fix_defs::fields::SFIXField_CheckSum<>::FID, 0);
+    }
+
+    template<typename MsgType, typename T = typename fix_defs::fields::SFIXField_CheckSum<>>
+    typename std::enable_if<T::TYPE_NAME == fix_defs::fieldTypes::STRING, void>::type
+    setDummyCheckSum(MsgType& msg)
+    {
+        msg.trailer().setSubField(fix_defs::fields::SFIXField_CheckSum<>::FID, "000");
+    }
+
+    template<typename MsgType>
     size_t handlePreSend(MsgType& msg, boost::asio::const_buffer& toSend)
     {
         // TODO - checksum, seq num tracking etc
+        msg.setSubField(fix_defs::fields::SFIXField_SenderCompID<>::FID, _senderCompID);
+        msg.setSubField(fix_defs::fields::SFIXField_TargetCompID<>::FID, _targetCompID);
+        if(!_senderSubID.empty())
+        {
+            msg.setSubField(fix_defs::fields::SFIXField_SenderSubID<>::FID, _senderSubID);
+        }
+        if(!_targetSubID.empty())
+        {
+            msg.setSubField(fix_defs::fields::SFIXField_TargetSubID<>::FID, _targetSubID);
+        }
+
+        addSeqNum(msg);
+        setDummyCheckSum(msg);
+
+        // get len and add checksum
+
 
         toSend = msg.getBufferOutput();
         return boost::asio::detail::buffer_size_helper(toSend);
@@ -268,6 +322,16 @@ private:
 
     MsgBuilderType          _msgBuilder;
     TapperType              _tapper;
+
+    // TODO - recover seq num and seq num negotiation - maybe have a specific class to handle seqnum
+    size_t                  _recvSeqNum;
+    size_t                  _sendSeqNum;
+
+    // identity fields
+    std::string             _senderCompID;
+    std::string             _targetCompID;
+    std::string             _senderSubID;
+    std::string             _targetSubID;
 };
 
 } // vvf_fix

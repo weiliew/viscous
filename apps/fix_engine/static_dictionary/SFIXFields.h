@@ -84,10 +84,10 @@ public:
         return _value;
     }
 
-    template<typename ValType>
+    template<typename ValType, typename ToString = std::true_type>
     void setValue(ValType& val)
     {
-        _value.setCachedVal<ValType>(val);
+        _value.setCachedVal<ValType, ToString>(val);
     }
 
     int index()

@@ -30,7 +30,7 @@ public:
     {}
 
     constexpr static int                   FID          = 0;
-    constexpr static StringConstant        NAME         = StringConstant("header");
+    constexpr static StringConstant        NAME         = StringConstant("collections");
     constexpr static bool                  IS_GROUP     = false;
     constexpr static bool                  IS_REQUIRED  = true;
     constexpr static bool                  VALIDATE     = Validate::value;
@@ -73,6 +73,12 @@ public:
     constexpr bool isSubField(int fid)
     {
         return isSubFieldUnwind(fid, typename gens<sizeof...(FieldTypes)>::type());
+    }
+
+    template<typename T>
+    bool setSubField(int fid, T& val)
+    {
+        return setSubFieldUnwind(fid, val, typename gens<sizeof...(FieldTypes)>::type());
     }
 
     bool getSubField(int fid, CachedField& retField)
@@ -281,6 +287,41 @@ private:
         {
             // found it
             return field.set(decoder);
+        }
+        else
+        {
+            // not found
+            return false;
+        }
+    }
+
+    template<typename T, int ...S>
+    bool setSubFieldUnwind(int fid, T& val, seq<S...>)
+    {
+        return setSubField(fid, val, std::get<S>(_fieldList) ...);
+    }
+
+    template<typename T, typename FieldType, typename... FieldTypeList>
+    bool setSubField(int fid, T& val, FieldType& field, FieldTypeList&... fieldList)
+    {
+        if(fid == field.FID)
+        {
+            // found it
+            field.setValue(val);
+            return true;
+        }
+
+        return setSubField(fid, val, fieldList...);
+    }
+
+    template<typename T, typename FieldType>
+    bool setSubField(int fid, T& val, FieldType& field)
+    {
+        if(fid == field.FID)
+        {
+            // found it
+            field.setValue(val);
+            return true;
         }
         else
         {
