@@ -127,8 +127,8 @@ public:
         return true;
     }
 
-    template<typename ValType>
-    void setValue(ValType&)
+    template<typename ValType, typename ToString = std::true_type>
+    void setValue(ValType& val)
     {
         // no-op on setValue for a group field type
     }

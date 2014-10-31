@@ -382,7 +382,7 @@ private:
         if(fid == field.FID)
         {
             // found it
-//            field.template setValue<ToString>(val);
+            setField<T, FieldType, ToString>(val, field);
             return true;
         }
 
@@ -395,7 +395,7 @@ private:
         if(fid == field.FID)
         {
             // found it
-//            field.template setValue<ToString>(val);
+            setField<T, FieldType, ToString>(val, field);
             return true;
         }
         else
@@ -403,6 +403,20 @@ private:
             // not found
             return false;
         }
+    }
+
+    template<typename T, typename FieldType, typename ToString>
+    typename std::enable_if<std::is_array<T>::value, void>::type
+    setField(T& val, FieldType& field)
+    {
+        field.setValue(val);
+    }
+
+    template<typename T, typename FieldType, typename ToString>
+    typename std::enable_if<!std::is_array<T>::value, void>::type
+    setField(T& val, FieldType& field)
+    {
+        field.template setValue<T, ToString>(val);
     }
 
     // isSubField

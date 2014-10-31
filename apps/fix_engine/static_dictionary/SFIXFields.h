@@ -90,6 +90,12 @@ public:
         _value.setCachedVal<ValType, ToString>(val);
     }
 
+    template<size_t N>
+    void setValue(const char (&val) [N])
+    {
+        _value.setCachedVal(val);
+    }
+
     int index()
     {
         if(_valIndex > 0 || !_value.value())

@@ -158,6 +158,14 @@ public:
     template<typename T, typename ToString = std::true_type>
     void setCachedVal(T& val);
 
+    template<size_t N>
+    void setCachedVal(const char (&val) [N])
+    {
+        _stringVal._value = val;
+        _val = _stringVal._value.c_str();
+        _stringVal._cached = true;
+    }
+
     void clear()
     {
         _val = NULL;
