@@ -30,7 +30,7 @@ using namespace vf_common;
 namespace vf_fix { namespace fix_defs {
     extern constexpr StringConstant BeginString("8=FIX.</xsl:text>
     <xsl:value-of select="@major"/><xsl:text disable-output-escaping="yes">.</xsl:text>
-    <xsl:value-of select="@minor"/><xsl:text disable-output-escaping="yes">\x019=");
+    <xsl:value-of select="@minor"/><xsl:text disable-output-escaping="yes">\0019=");
 } } // vf_fix::fix_defs
         
 #include "apps/fix_engine/static_dictionary/SFIXFields.h"
@@ -175,6 +175,8 @@ namespace messages
     {</xsl:text>
 <xsl:for-each select="//message[generate-id() = generate-id(key('keyFieldByMsgType', @msgtype)[1])]">
         extern constexpr StringConstant msg_<xsl:value-of select="@msgtype"/>("<xsl:value-of select="@msgtype"/>");</xsl:for-each>
+<xsl:for-each select="//message[generate-id() = generate-id(key('keyFieldByMsgType', @msgtype)[1])]">
+        extern constexpr StringConstant msg_str_<xsl:value-of select="@msgtype"/>("\00135=<xsl:value-of select="@msgtype"/>\001");</xsl:for-each>
 <xsl:text disable-output-escaping="yes">
     } // message_type
 </xsl:text>
@@ -190,7 +192,7 @@ namespace messages
 <xsl:text disable-output-escaping="yes">
         template&#60;typename Validate = std::false_type, unsigned int Capacity = 50&#62;</xsl:text>
         using SFIXMessage_<xsl:value-of select="@name"/><xsl:text disable-output-escaping="yes"> = SFIXMessage&#60;</xsl:text>
-            <xsl:value-of select="@name"/>, message_type::msg_<xsl:value-of select="@msgtype"/>, Validate<xsl:text disable-output-escaping="yes">
+            <xsl:value-of select="@name"/>, message_type::msg_str_<xsl:value-of select="@msgtype"/>, Validate<xsl:text disable-output-escaping="yes">
             , header::SFIXMessageHeader&#60;Validate, Capacity&#62;
             , trailer::SFIXMessageTrailer&#60;Validate, Capacity&#62;
 </xsl:text>

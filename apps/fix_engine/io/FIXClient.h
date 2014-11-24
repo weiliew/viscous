@@ -34,9 +34,16 @@ public:
     typedef typename FIXTraitsType::MsgTraitsType::LogoutMsgType        LogoutMsgType;
     typedef typename FIXTraitsType::MsgTraitsType::HeartbeatMsgType     HeartbeatMsgType;
 
-    FIXClient()
+    FIXClient(const std::string& senderCompId,
+            const std::string& targetCompId,
+            const std::string& senderSubId = std::string(),
+            const std::string& targetSubId = std::string())
     : BaseType(*this)
     {
+        BaseType::setSenderCompID(senderCompId);
+        BaseType::setTargetCompID(targetCompId);
+        BaseType::setSenderSubID(senderSubId);
+        BaseType::setTargetSubID(targetSubId);
     }
 
     virtual ~FIXClient()

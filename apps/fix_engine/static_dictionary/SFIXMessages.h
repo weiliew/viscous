@@ -192,20 +192,14 @@ public:
             int remLen = OUTPUT_STR_CAPACITY - startIdx;
             char * buffer = &_outputStr[startIdx];
 
-            // add msg type
-            *buffer = '\001';
-            +buffer;
-            --remLen;
+            // add msg type - msg type in the format of <SOH>35=<MsgType><SOH>
             memcpy(buffer, TYPE.data(), TYPE.size());
             remLen -= TYPE.size();
             buffer += TYPE.size();
-            *buffer = '\001';
-            +buffer;
-            --remLen;
 
             _strGenerated = _header.setOutputBuffer(buffer, remLen) &&
-                    setOutputBuffer(buffer, remLen) &&
-                    _trailer.setOutputBuffer(buffer, remLen);
+                             setOutputBuffer(buffer, remLen) &&
+                            _trailer.setOutputBuffer(buffer, remLen);
             if(_strGenerated)
             {
                 _outputStrLen = OUTPUT_STR_CAPACITY - remLen;
@@ -216,9 +210,6 @@ public:
                 return boost::asio::const_buffer();
             }
         }
-
-        // prepend field sep
-        _outputStr[startIdx-1] = '\001';
 
         // now append the begin string and the length
         if(_outputStrLen < 10)
@@ -246,7 +237,7 @@ public:
 
         // TODO - checksum !!
 
-        return boost::asio::const_buffer(&_outputStr[bufferStartIdx], _outputStrLen + (HeaderReservedCount - startIdx));
+        return boost::asio::const_buffer(&_outputStr[bufferStartIdx], _outputStrLen + (HeaderReservedCount - bufferStartIdx));
     }
 
 private:

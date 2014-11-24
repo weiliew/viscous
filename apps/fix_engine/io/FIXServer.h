@@ -35,15 +35,34 @@ template<typename FIXTraitsType = DefaultFIXAcceptorTraits>
 class FIXServer
 {
 public:
-    FIXServer()
+    typedef TcpAcceptorHandler<FIXServerSession<FIXTraitsType>> AcceptorHandlerType;
+    typedef typename AcceptorHandlerType::AcceptorPtrType       AcceptorPtrType;
+
+    FIXServer(const std::string& senderCompId,
+              const std::string& targetCompId,
+              const std::string& senderSubId = std::string(),
+              const std::string& targetSubId = std::string())
     : _handlerWork(_io)
     , _logger(_logSink, LogDebug) // TODO - configurable ?
     , _acceptorHandler(_io, _logger)
+    , _senderCompId(senderCompId)
+    , _targetCompId(targetCompId)
+    , _senderSubId(senderSubId)
+    , _targetSubId(targetSubId)
     {
+        _acceptorHandler.newAcceptorSignal().subscribe(this);
     }
 
     virtual ~FIXServer()
     {
+    }
+
+    void onData(AcceptorPtrType& acceptor)
+    {
+        acceptor->setSenderCompID(_senderCompId);
+        acceptor->setTargetCompID(_targetCompId);
+        acceptor->setSenderSubID(_senderSubId);
+        acceptor->setTargetSubID(_targetSubId);
     }
 
     bool run(const std::string& host, const std::string& port, bool blocking = false)
@@ -71,12 +90,16 @@ public:
     }
 
 private:
-    std::unique_ptr<std::thread>                            _handlerThread;
-    boost::asio::io_service                                 _io;
-    boost::asio::io_service::work                           _handlerWork;
-    typename FIXTraitsType::LogSinkType                     _logSink;
-    typename FIXTraitsType::LoggerType                      _logger;
-    TcpAcceptorHandler<FIXServerSession<FIXTraitsType>>     _acceptorHandler;
+    std::unique_ptr<std::thread>            _handlerThread;
+    boost::asio::io_service                 _io;
+    boost::asio::io_service::work           _handlerWork;
+    typename FIXTraitsType::LogSinkType     _logSink;
+    typename FIXTraitsType::LoggerType      _logger;
+    AcceptorHandlerType                     _acceptorHandler;
+    std::string                             _senderCompId;
+    std::string                             _targetCompId;
+    std::string                             _senderSubId;
+    std::string                             _targetSubId;
 };
 
 } // vf_fix

@@ -132,8 +132,13 @@ public:
     // this is the main func where all received data is passed
     void onData(BufferPtrType& buffer)
     {
-        // process data
-        VF_LOG_DEBUG(_logger, "Received FIX message" << std::string(buffer->buffer(), buffer->size()));
+        // process incoming data
+        if(_logger.isLogDebug())
+        {
+            _printBuffer.assign(buffer->buffer(), buffer->size());
+            std::replace(_printBuffer.begin(), _printBuffer.end(), '\1', '|');
+            VF_LOG_DEBUG(_logger, "Received FIX message" << _printBuffer);
+        }
 
         // check fix message and call onAppData if it is an application msg type and onAdminData if it is admin data type
 
@@ -163,6 +168,26 @@ public:
     void removeEndPoint(const std::string& host, const std::string& port)
     {
         _sessionIo.removeEndpoint(host, port);
+    }
+
+    void setSenderSubID(const std::string& id)
+    {
+        _senderSubID = id;
+    }
+
+    void setTargetSubID(const std::string& id)
+    {
+        _targetSubID = id;
+    }
+
+    void setSenderCompID(const std::string& id)
+    {
+        _senderCompID = id;
+    }
+
+    void setTargetCompID(const std::string& id)
+    {
+        _targetCompID = id;
     }
 
 protected:
@@ -264,53 +289,85 @@ private:
 
     template<typename MsgType>
     typename std::enable_if<MsgType::TYPE == fix_defs::messages::message_type::msg_0, void>::type
-    addSeqNum(MsgType&)
+    addSeqNum(MsgType& msg)
     {
+        if(!msg.header().setSubField(fix_defs::fields::SFIXField_MsgSeqNum<>::FID, _sendSeqNum))
+        {
+            VF_LOG_ERROR(_logger, "Failed to set SeqNum");
+        }
     }
 
     template<typename MsgType>
     typename std::enable_if<MsgType::TYPE != fix_defs::messages::message_type::msg_0, void>::type
     addSeqNum(MsgType& msg)
     {
-        msg.header().setSubField(fix_defs::fields::SFIXField_MsgSeqNum<>::FID, ++_sendSeqNum);
+        if(!msg.header().setSubField(fix_defs::fields::SFIXField_MsgSeqNum<>::FID, ++_sendSeqNum))
+        {
+            VF_LOG_ERROR(_logger, "Failed to set SeqNum");
+        }
     }
 
     template<typename MsgType, typename T = typename fix_defs::fields::SFIXField_CheckSum<>>
     typename std::enable_if<T::TYPE_NAME == fix_defs::fieldTypes::CHAR, void>::type
     setDummyCheckSum(MsgType& msg)
     {
-        msg.trailer().setSubField(fix_defs::fields::SFIXField_CheckSum<>::FID, 0);
+        if(!msg.trailer().setSubField(fix_defs::fields::SFIXField_CheckSum<>::FID, '0'))
+        {
+            VF_LOG_ERROR(_logger, "Failed to set CheckSum");
+        }
     }
 
     template<typename MsgType, typename T = typename fix_defs::fields::SFIXField_CheckSum<>>
     typename std::enable_if<T::TYPE_NAME == fix_defs::fieldTypes::STRING, void>::type
     setDummyCheckSum(MsgType& msg)
     {
-        msg.trailer().setSubField(fix_defs::fields::SFIXField_CheckSum<>::FID, "000");
+        if(!msg.trailer().setSubField(fix_defs::fields::SFIXField_CheckSum<>::FID, "000"))
+        {
+            VF_LOG_ERROR(_logger, "Failed to set CheckSum");
+        }
     }
 
     template<typename MsgType>
     size_t handlePreSend(MsgType& msg, boost::asio::const_buffer& toSend)
     {
-        // TODO - checksum, seq num tracking etc
-        msg.setSubField(fix_defs::fields::SFIXField_SenderCompID<>::FID, _senderCompID);
-        msg.setSubField(fix_defs::fields::SFIXField_TargetCompID<>::FID, _targetCompID);
+        if(!msg.header().setSubField(fix_defs::fields::SFIXField_SenderCompID<>::FID, _senderCompID))
+        {
+            VF_LOG_ERROR(_logger, "Failed to set SenderCompID");
+        }
+        if(!msg.header().setSubField(fix_defs::fields::SFIXField_TargetCompID<>::FID, _targetCompID))
+        {
+            VF_LOG_ERROR(_logger, "Failed to set TargetCompID");
+        }
         if(!_senderSubID.empty())
         {
-            msg.setSubField(fix_defs::fields::SFIXField_SenderSubID<>::FID, _senderSubID);
+            if(!msg.header().setSubField(fix_defs::fields::SFIXField_SenderSubID<>::FID, _senderSubID))
+            {
+                VF_LOG_ERROR(_logger, "Failed to set SenderSubID");
+            }
         }
         if(!_targetSubID.empty())
         {
-            msg.setSubField(fix_defs::fields::SFIXField_TargetSubID<>::FID, _targetSubID);
+            if(!msg.header().setSubField(fix_defs::fields::SFIXField_TargetSubID<>::FID, _targetSubID))
+            {
+                VF_LOG_ERROR(_logger, "Failed to set TargetSubID");
+            }
         }
 
         addSeqNum(msg);
         setDummyCheckSum(msg);
 
-        // get len and add checksum
+        // TODO - get len and add checksum
 
 
         toSend = msg.getBufferOutput();
+
+        if(_logger.isLogDebug())
+        {
+            _printBuffer.assign(boost::asio::buffer_cast<const char*>(toSend), boost::asio::buffer_size(toSend));
+            std::replace(_printBuffer.begin(), _printBuffer.end(), '\1', '|');
+            VF_LOG_DEBUG(_logger, "Sending FIX message [" << _printBuffer << "]");
+        }
+
         return boost::asio::detail::buffer_size_helper(toSend);
     }
 
@@ -332,6 +389,8 @@ private:
     std::string             _targetCompID;
     std::string             _senderSubID;
     std::string             _targetSubID;
+
+    std::string             _printBuffer;
 };
 
 } // vvf_fix

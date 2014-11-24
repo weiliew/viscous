@@ -44,7 +44,7 @@ public:
     constexpr static bool                  IS_GROUP    = false;
     constexpr static bool                  IS_REQUIRED = Required::value;
     constexpr static bool                  VALIDATE    = Validate::value;
-    constexpr static StringConstant        TRAILER     = StringConstant("\001\000");
+    constexpr static StringConstant        TRAILER     = StringConstant("\001");
 
     constexpr static FIXField::FieldType type()
     {
@@ -158,6 +158,8 @@ public:
             return false;
         }
 
+        std::cout << "Setting field: " << FID_STR << " val: " << _value.value() << std::endl;
+
         int remainingLen = size;
         int len = strncpy(buffer, FID_STR, remainingLen);
         remainingLen -= len;
@@ -216,12 +218,16 @@ public:
         }
 
         // memcpy
+        char * origBuffer = buffer;
+        std::cout << "SFIXField: setOutputBuffer: " << FID_STR.data() << _value.value() << TRAILER.data() << std::endl;
         memcpy(buffer, FID_STR.data(), FID_STR.size());
         buffer += FID_STR.size();
         memcpy(buffer, _value.value(), _value.size());
         buffer += _value.size();
         memcpy(buffer, TRAILER.data(), TRAILER.size());
         buffer += TRAILER.size();
+
+        remLen -= lenRequired;
 
         return true;
     }

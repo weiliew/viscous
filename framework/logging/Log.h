@@ -135,6 +135,11 @@ public:
         _logLevel = level;
     }
 
+    bool isLogDebug()
+    {
+        return _logLevel == LogDebug;
+    }
+
 private:
     LogLevel    _logLevel;
     LogSink&    _logSink;
