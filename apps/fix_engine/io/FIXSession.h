@@ -354,10 +354,6 @@ private:
         }
 
         addSeqNum(msg);
-        setDummyCheckSum(msg);
-
-        // TODO - get len and add checksum
-
 
         toSend = msg.getBufferOutput();
 

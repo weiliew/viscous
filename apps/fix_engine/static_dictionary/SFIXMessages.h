@@ -189,7 +189,8 @@ public:
 
         if(!_strGenerated)
         {
-            int remLen = OUTPUT_STR_CAPACITY - startIdx;
+            int startLen = OUTPUT_STR_CAPACITY - startIdx;
+            int remLen = startLen;
             char * buffer = &_outputStr[startIdx];
 
             // add msg type - msg type in the format of <SOH>35=<MsgType><SOH>
@@ -202,7 +203,7 @@ public:
                             _trailer.setOutputBuffer(buffer, remLen);
             if(_strGenerated)
             {
-                _outputStrLen = OUTPUT_STR_CAPACITY - remLen;
+                _outputStrLen = startLen - remLen;
             }
             else
             {
@@ -235,9 +236,16 @@ public:
         int bufferStartIdx = startIdx - fix_defs::BeginString.size();
         memcpy(&_outputStr[bufferStartIdx], fix_defs::BeginString.data(), fix_defs::BeginString.size());
 
-        // TODO - checksum !!
+        // calculate and add the checksum
+        _outputStrLen += (HeaderReservedCount - bufferStartIdx);
 
-        return boost::asio::const_buffer(&_outputStr[bufferStartIdx], _outputStrLen + (HeaderReservedCount - bufferStartIdx));
+        uint32_t checkSum = 0;
+        for( uint32_t count = bufferStartIdx; count < _outputStrLen; checkSum += _outputStr[count++] );
+
+        sprintf(&_outputStr[_outputStrLen], "10=%03d\001", checkSum%256);
+        _outputStrLen += 7;
+
+        return boost::asio::const_buffer(&_outputStr[bufferStartIdx], _outputStrLen);
     }
 
 private:
