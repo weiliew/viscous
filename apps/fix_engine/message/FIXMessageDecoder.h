@@ -27,19 +27,22 @@ template<size_t HolderCapacity>
 class FIXMessageDecoder
 {
 public:
+    static constexpr size_t FieldCapacity = HolderCapacity;
     typedef std::pair<int, const char *>                FieldPairType;
     typedef std::array<FieldPairType, HolderCapacity>   FieldArrType;
     typedef typename FieldArrType::iterator             Iterator;
 
     FIXMessageDecoder()
-    : _numFields(0)
-    , _currPos(0)
-    , _parsed(false)
     {
-        _fieldArrays.fill(std::make_pair(0, (const char *) NULL));
+        clearFieldArrays();
     }
 
     virtual ~FIXMessageDecoder(){}
+
+    void clearFieldArrays()
+    {
+        _fieldArrays.fill(std::make_pair(0, (const char *) NULL));
+    }
 
     bool parseBuffer(char * buffer, size_t len)
     {
@@ -52,7 +55,15 @@ public:
         size_t consumed = 0;
         while(consumed < len)
         {
-            _fieldArrays[_numFields].first = atoi(idx);  // TODO - make more efficient
+            int fid = atoi(idx);  // TODO - make more efficient
+            _fieldArrays[_numFields].first = fid;
+
+            // special FIX hack to get fast access to the msg type
+            if(fid == 35)
+            {
+                _msgTypeIdx = _numFields;
+            }
+
             idx = (char *) memchr(idx, EQ, len - consumed);
             if(UNLIKELY(idx == NULL))
             {
@@ -136,11 +147,19 @@ public:
         return _currPos == _numFields-1;
     }
 
+    const char * getMsgType()
+    {
+        return _fieldArrays[_msgTypeIdx].second;
+    }
+
 private:
-    FieldArrType   _fieldArrays;
-    size_t         _numFields;
-    size_t         _currPos;
-    bool           _parsed;
+    FieldArrType    _fieldArrays;
+    size_t          _numFields = 0;
+    size_t          _currPos = 0;
+    bool            _parsed = false;
+
+    // helper variable to store the frequently used fields
+    size_t          _msgTypeIdx = 0;
 };
 
 }  // namespace vf_fix

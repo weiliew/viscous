@@ -53,4 +53,4 @@ PROCESS_V5_DICTIONARY(FIX50    ../cfgfiles/FIXT11.xml ../cfgfiles/FIX50.xml    F
 PROCESS_V5_DICTIONARY(FIX50SP1 ../cfgfiles/FIXT11.xml ../cfgfiles/FIX50SP1.xml FieldDefsGen50SP1.h)
 PROCESS_V5_DICTIONARY(FIX50SP2 ../cfgfiles/FIXT11.xml ../cfgfiles/FIX50SP2.xml FieldDefsGen50SP2.h)
 
-add_subdirectory(test)
+#add_subdirectory(test)

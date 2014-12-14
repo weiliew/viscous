@@ -36,7 +36,7 @@ struct DefaultTapper
     }
 };
 
-template<typename Validate, unsigned int GroupCapacity = 50>
+template<typename Validate, unsigned int GroupCapacity>
 struct DefaultFIXTMsgraits
 {
     // Note: include the desired fix version def files before including this header file
@@ -47,7 +47,8 @@ struct DefaultFIXTMsgraits
 
 struct DefaultFIXInitiatorTraits
 {
-    constexpr static size_t Capacity = 50;
+    constexpr static size_t GroupCapacity = 50; // max number of fields in a single group
+    constexpr static size_t NumFixFields = 256; // max number of fields in a single fix message
     typedef std::true_type                                  Validate;
     typedef StdoutSink                                      LogSinkType;
     typedef Logger<LogSinkType>                             LoggerType;
@@ -55,7 +56,7 @@ struct DefaultFIXInitiatorTraits
     typedef typename BufferPoolType::BufferPtrType          BufferPtrType;
     typedef typename BufferPoolType::PooledFactoryType      PooledFactoryType;
     typedef std::true_type                                  InlineIOType;
-    typedef DefaultFIXTMsgraits<Validate, Capacity>         MsgTraitsType;
+    typedef DefaultFIXTMsgraits<Validate, GroupCapacity>    MsgTraitsType;
     typedef DefaultTapper<BufferPtrType>                    TapperType;
     typedef Signal<BufferPtrType>                           OutgoingSignalType;
     typedef Signal<BufferPtrType>                           IncomingSignalType;
@@ -72,7 +73,8 @@ struct DefaultFIXInitiatorTraits
 
 struct DefaultFIXAcceptorTraits
 {
-    constexpr static size_t Capacity = 50;
+    constexpr static size_t GroupCapacity = 50; // max number of fields in a single group
+    constexpr static size_t NumFixFields = 256; // max number of fields in a single fix message
     typedef std::true_type                                  Validate;
     typedef StdoutSink                                      LogSinkType;
     typedef Logger<LogSinkType>                             LoggerType;
@@ -80,7 +82,7 @@ struct DefaultFIXAcceptorTraits
     typedef typename BufferPoolType::BufferPtrType          BufferPtrType;
     typedef typename BufferPoolType::PooledFactoryType      PooledFactoryType;
     typedef std::true_type                                  InlineIOType;
-    typedef DefaultFIXTMsgraits<Validate, Capacity>         MsgTraitsType;
+    typedef DefaultFIXTMsgraits<Validate, GroupCapacity>    MsgTraitsType;
     typedef DefaultTapper<BufferPtrType>                    TapperType;
     typedef Signal<BufferPtrType>                           OutgoingSignalType;
     typedef Signal<BufferPtrType>                           IncomingSignalType;

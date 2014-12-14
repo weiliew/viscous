@@ -55,6 +55,7 @@ public:
 
     bool setLogonMsg(LogonMsgType& msg)
     {
+        BaseType::setCommonFields(msg);
         setupFIXMsg(msg);
 
         return true;
@@ -62,6 +63,7 @@ public:
 
     bool setLogoutMsg(LogoutMsgType& msg)
     {
+        BaseType::setCommonFields(msg);
         setupFIXMsg(msg);
 
         return true;
@@ -69,6 +71,7 @@ public:
 
     bool setHeartbeatMsg(HeartbeatMsgType& msg)
     {
+        BaseType::setCommonFields(msg);
         setupFIXMsg(msg);
 
         return true;

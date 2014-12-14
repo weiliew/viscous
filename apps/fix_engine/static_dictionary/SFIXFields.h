@@ -219,7 +219,6 @@ public:
 
         // memcpy
         char * origBuffer = buffer;
-        std::cout << "SFIXField: setOutputBuffer: " << FID_STR.data() << _value.value() << TRAILER.data() << std::endl;
         memcpy(buffer, FID_STR.data(), FID_STR.size());
         buffer += FID_STR.size();
         memcpy(buffer, _value.value(), _value.size());

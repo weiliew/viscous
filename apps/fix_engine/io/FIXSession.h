@@ -14,6 +14,7 @@
 #define FIXSESSION_H_
 
 #include <type_traits>
+#include <timer/TimerDefs.h>
 
 using namespace vf_common;
 
@@ -62,6 +63,8 @@ public:
     , _msgBuilder(_outgoingSignal, _sessionIo.getBufferFactory())
     , _recvSeqNum(0)
     , _sendSeqNum(0)
+    , _logonSent(false)
+    , _sessionTimer(*this, _logger)
     {
         // register callbacks
         _sessionIo.registerConnectCallback(std::bind(&FIXSession<DerivedSessionType, FIXTraitsType>::onConnect, this));
@@ -82,6 +85,11 @@ public:
         {
             logout();
         }
+    }
+
+    SessionIoType& getSessionIO()
+    {
+        return _sessionIo;
     }
 
     OutgoingSignalType& getOutgoingSignal()
@@ -112,19 +120,25 @@ public:
     }
 
     // called when a logon message has been received
-    // return true to proceed, false to reject logon message
-    bool onLogon()
+    void onLogon()
     {
-        return _derivedImpl.onLogon();
+        // start heartbeat timer
+        _sessionTimer.runTimer();
+
+        _derivedImpl.onLogon();
     }
 
     // called when a logout message is received
     void onLogout()
     {
+        // stop heartbeat timer
+        _sessionTimer.stopTimer();
+
+        _logonSent = false;
         _derivedImpl.onLogout();
     }
 
-    void onHeartBeat()
+    void onHeartbeat()
     {
         _derivedImpl.onHeartbeat();
     }
@@ -140,8 +154,48 @@ public:
             VF_LOG_DEBUG(_logger, "Received FIX message" << _printBuffer);
         }
 
-        // check fix message and call onAppData if it is an application msg type and onAdminData if it is admin data type
+        // parse FIX message
+        if(!buffer->parseFIXMessage(_msgDecoder))
+        {
+            // TODO - return error and disconnect
+            //disconnect();
+        }
 
+        // check fix message and call onAppData if it is an application msg type and onAdminData if it is admin data type
+        switch(_msgDecoder.getMsgType()[0])
+        {
+        case fix_defs::messages::message_type::msg_A[0] : // Logon
+            if(!_logonSent)
+            {
+                logon();
+            }
+            onLogon();
+            break;
+
+        case fix_defs::messages::message_type::msg_0[0] : // HB
+            // respond heartbeat
+            sendHeartbeat();
+            break;
+
+        default:
+            forwardToApplication(buffer);
+            break;
+        }
+    }
+
+    void forwardToApplication(typename FIXTraitsType::BufferPtrType msg)
+    {
+        /* We have options here on what to do with the fix message
+         * 1. Pass the buffer as is
+         * 2. Pass the buffer and the decoder
+         * 3. Pass the FIXMessage with the decoder
+         * 4. Parse the data and create a SFIXMessage and pass that on
+         *
+         * It is probably better to pass on something simple, but at the same time
+         * create helper functions to convert it into SFIXMessage type structure - together with
+         * validation checks.
+         */
+        _derivedImpl.onAppData(msg);
     }
 
     void onConnect()
@@ -202,11 +256,13 @@ protected:
         {
             VF_LOG_ERROR(_logger, "Failed to send logon message. Disconnecting.");
             _sessionIo.disconnect();
+            _logonSent = false;
         }
         else
         {
             VF_LOG_INFO(_logger, "Sent logon message.");
         }
+        _logonSent = true;
     }
 
     virtual void logout(bool reconnect = false)
@@ -228,7 +284,7 @@ protected:
         }
     }
 
-    /*virtual*/ void sendHeartBeat()
+    /*virtual*/ void sendHeartbeat()
     {
         if(!setHeartbeatMsg())
         {
@@ -240,96 +296,7 @@ protected:
     template<typename MsgType>
     void setCommonFields(MsgType& msg)
     {
-        // TODO - Sender and Target Comp ID, SeqNum, Sending Time
-    }
-
-    MsgBuilderType& getMsgBuilder()
-    {
-        return _msgBuilder;
-    }
-
-    TapperType& getTapper()
-    {
-        return _tapper;
-    }
-
-    LogonMsgType            _logonMsg;
-    LogoutMsgType           _logoutMsg;
-    HeartbeatMsgType        _hbMsg;
-
-    LogSinkType             _logSink;
-    LoggerType              _logger;
-    SessionIoType           _sessionIo;
-
-private:
-    template<typename MsgType>
-    bool syncSendFIXMsg(MsgType& msg)
-    {
-        boost::asio::const_buffer toSend;
-        size_t bufSize = handlePreSend(msg, toSend);
-        if(!bufSize)
-        {
-            return false;
-        }
-
-        return (_sessionIo.syncWrite(toSend) == bufSize);
-    }
-
-    template<typename MsgType>
-    void asyncSendFIXMsg(MsgType& msg)
-    {
-        boost::asio::const_buffer toSend;
-        if(!handlePreSend(msg, toSend))
-        {
-            return false;
-        }
-
-        _sessionIo.asyncWrite(toSend);
-    }
-
-    template<typename MsgType>
-    typename std::enable_if<MsgType::TYPE == fix_defs::messages::message_type::msg_0, void>::type
-    addSeqNum(MsgType& msg)
-    {
-        if(!msg.header().setSubField(fix_defs::fields::SFIXField_MsgSeqNum<>::FID, _sendSeqNum))
-        {
-            VF_LOG_ERROR(_logger, "Failed to set SeqNum");
-        }
-    }
-
-    template<typename MsgType>
-    typename std::enable_if<MsgType::TYPE != fix_defs::messages::message_type::msg_0, void>::type
-    addSeqNum(MsgType& msg)
-    {
-        if(!msg.header().setSubField(fix_defs::fields::SFIXField_MsgSeqNum<>::FID, ++_sendSeqNum))
-        {
-            VF_LOG_ERROR(_logger, "Failed to set SeqNum");
-        }
-    }
-
-    template<typename MsgType, typename T = typename fix_defs::fields::SFIXField_CheckSum<>>
-    typename std::enable_if<T::TYPE_NAME == fix_defs::fieldTypes::CHAR, void>::type
-    setDummyCheckSum(MsgType& msg)
-    {
-        if(!msg.trailer().setSubField(fix_defs::fields::SFIXField_CheckSum<>::FID, '0'))
-        {
-            VF_LOG_ERROR(_logger, "Failed to set CheckSum");
-        }
-    }
-
-    template<typename MsgType, typename T = typename fix_defs::fields::SFIXField_CheckSum<>>
-    typename std::enable_if<T::TYPE_NAME == fix_defs::fieldTypes::STRING, void>::type
-    setDummyCheckSum(MsgType& msg)
-    {
-        if(!msg.trailer().setSubField(fix_defs::fields::SFIXField_CheckSum<>::FID, "000"))
-        {
-            VF_LOG_ERROR(_logger, "Failed to set CheckSum");
-        }
-    }
-
-    template<typename MsgType>
-    size_t handlePreSend(MsgType& msg, boost::asio::const_buffer& toSend)
-    {
+        // TODO - Sending Time
         if(!msg.header().setSubField(fix_defs::fields::SFIXField_SenderCompID<>::FID, _senderCompID))
         {
             VF_LOG_ERROR(_logger, "Failed to set SenderCompID");
@@ -353,6 +320,115 @@ private:
             }
         }
 
+    }
+
+    MsgBuilderType& getMsgBuilder()
+    {
+        return _msgBuilder;
+    }
+
+    TapperType& getTapper()
+    {
+        return _tapper;
+    }
+
+    LogonMsgType            _logonMsg;
+    LogoutMsgType           _logoutMsg;
+    HeartbeatMsgType        _hbMsg;
+
+    LogSinkType             _logSink;
+    LoggerType              _logger;
+    SessionIoType           _sessionIo;
+
+private:
+    template<typename FIXSessionType, typename LoggerType>
+    class FIXSessionTimer : public SecondsTimer
+    {
+    public:
+        FIXSessionTimer(FIXSessionType& session, LoggerType& logger, uint64_t interval = 60)
+        : SecondsTimer(_session.getSessionIO().getIO()) // relative timer
+        , _session(session)
+        , _logger(logger)
+        {
+            // 60 seconds default timer
+            if(!interval)
+            {
+                interval = 60;
+            }
+            VF_LOG_INFO(_logger, "FIXSessionTimer: Starting timer with interval: " << interval);
+            setInterval(interval);
+        }
+
+        bool onTimer()
+        {
+            // send heartbeat on timer invoke
+            VF_LOG_DEBUG(_logger, "FIXSessionTimer: onTimer: Sending heartbeat message.");
+
+            _session.sendHeartbeat();
+
+            return false; // continue timer
+        }
+
+        void onStop(TimerStopCode stopCode)
+        {
+            VF_LOG_INFO(_logger, "FIXSessionTimer: Timer stopped with code: " << stopCode);
+        }
+
+    private:
+        FIXSessionType&   _session;
+        LoggerType&       _logger;
+    };
+
+    template<typename MsgType>
+    bool syncSendFIXMsg(MsgType& msg)
+    {
+        boost::asio::const_buffer toSend;
+        size_t bufSize = handlePreSend(msg, toSend);
+        if(!bufSize)
+        {
+            return false;
+        }
+
+        return (_sessionIo.syncWrite(toSend) == bufSize);
+    }
+
+    template<typename MsgType>
+    void asyncSendFIXMsg(MsgType& msg)
+    {
+        boost::asio::const_buffer toSend;
+        if(!handlePreSend(msg, toSend))
+        {
+            return;
+        }
+
+        _sessionIo.asyncWrite(toSend);
+    }
+
+    // heartbeat msg - do not increment seq num
+    template<typename MsgType>
+    typename std::enable_if<MsgType::TYPE == fix_defs::messages::message_type::msg_0, void>::type
+    addSeqNum(MsgType& msg)
+    {
+        if(!msg.header().setSubField(fix_defs::fields::SFIXField_MsgSeqNum<>::FID, _sendSeqNum))
+        {
+            VF_LOG_ERROR(_logger, "Failed to set SeqNum");
+        }
+    }
+
+    template<typename MsgType>
+    typename std::enable_if<MsgType::TYPE != fix_defs::messages::message_type::msg_0, void>::type
+    addSeqNum(MsgType& msg)
+    {
+        if(!msg.header().setSubField(fix_defs::fields::SFIXField_MsgSeqNum<>::FID, ++_sendSeqNum))
+        {
+            VF_LOG_ERROR(_logger, "Failed to set SeqNum");
+        }
+    }
+
+    template<typename MsgType>
+    size_t handlePreSend(MsgType& msg, boost::asio::const_buffer& toSend)
+    {
+        setCommonFields(msg);
         addSeqNum(msg);
 
         toSend = msg.getBufferOutput();
@@ -387,6 +463,12 @@ private:
     std::string             _targetSubID;
 
     std::string             _printBuffer;
+
+    // state based bool
+    bool                    _logonSent;
+
+    FIXMessageDecoder<FIXTraitsType::NumFixFields>                             _msgDecoder;
+    FIXSessionTimer<FIXSession<DerivedSessionType, FIXTraitsType>, LoggerType> _sessionTimer;
 };
 
 } // vvf_fix
